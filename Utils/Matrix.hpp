@@ -90,8 +90,10 @@ public:
     virtual std::unique_ptr<AbstractMatrix> add(const AbstractMatrix& other)const=0;
     //矩阵乘法（纯虚函数）
     virtual std::unique_ptr<AbstractMatrix> multiply(const AbstractMatrix& other)const=0;
+    virtual std::unique_ptr<AbstractMatrix> operator*(const AbstractMatrix& other)const=0;
     //标量乘法（纯虚函数）
     virtual std::unique_ptr<AbstractMatrix> scalarMultiply(double scalar)const=0;
+    virtual std::unique_ptr<AbstractMatrix> operator*(double scalar)const=0;
     //转置矩阵（纯虚函数）
     virtual std::unique_ptr<AbstractMatrix> transpose()const=0;
     //判断是否是方阵
@@ -246,7 +248,7 @@ public:     //抽象方法实现
         return result;
     }
 
-    //内置的矩阵乘法,时间复杂度O(n^3)*(*)
+    //内置的矩阵乘法（右乘）,时间复杂度O(n^3)*(*)
     std::unique_ptr<AbstractMatrix> multiply(const AbstractMatrix& other) const override {
         if (cols != other.getRows())
             throw std::invalid_argument("Matrix dimensions not match! try (m x n),(n x k)");
@@ -263,6 +265,9 @@ public:     //抽象方法实现
         }
         return result;
     }
+    std::unique_ptr<AbstractMatrix> operator*(const AbstractMatrix& other) const override{
+        return this->multiply(other);
+    }
 
     //内置的标量乘法,时间复杂度O(n^2)*(*)
     std::unique_ptr<AbstractMatrix> scalarMultiply(double scalar) const override{
@@ -273,6 +278,12 @@ public:     //抽象方法实现
             }
         }
         return result;
+    }
+    std::unique_ptr<AbstractMatrix> operator*(double scalar) const override{
+        return this->scalarMultiply(scalar);
+    }
+    friend std::unique_ptr<AbstractMatrix> operator*(double scalar,const AbstractMatrix&matrix){
+        return matrix.scalarMultiply(scalar);
     }
 
     //内置的转置运算
@@ -516,6 +527,9 @@ public:     //抽象方法实现
         }
         return result;
     }
+    std::unique_ptr<AbstractMatrix> operator*(const AbstractMatrix& other) const override{
+        return this->multiply(other);
+    }
 
     //内置的标量乘法
     std::unique_ptr<AbstractMatrix> scalarMultiply(double scalar) const override{
@@ -525,6 +539,12 @@ public:     //抽象方法实现
         for (const auto& elem : elements)
             result->set(elem.row, elem.col, elem.value*scalar);
         return result;
+    }
+    std::unique_ptr<AbstractMatrix> operator*(double scalar) const override{
+        return this->scalarMultiply(scalar);
+    }
+    friend std::unique_ptr<AbstractMatrix> operator*(double scalar,AbstractMatrix&matrix){
+        return matrix.scalarMultiply(scalar);
     }
 
     //内置的矩阵转置
@@ -711,6 +731,9 @@ public:     //实现父类AbstractMatrix的方法
         }
         return result;
     }
+    std::unique_ptr<AbstractMatrix> operator*(const AbstractMatrix& other) const override{
+        return this->multiply(other);
+    }
 
     //内置标量乘法
     std::unique_ptr<AbstractMatrix> scalarMultiply(double scalar) const override{
@@ -725,6 +748,13 @@ public:     //实现父类AbstractMatrix的方法
         }
         return result;
     }
+    std::unique_ptr<AbstractMatrix> operator*(double scalar) const override{
+        return this->scalarMultiply(scalar);
+    }
+    friend std::unique_ptr<AbstractMatrix> operator*(double scalar,AbstractMatrix&matrix){
+        return matrix.scalarMultiply(scalar);
+    }
+
 
     //转置，继续往下抛
     std::unique_ptr<AbstractMatrix> transpose() const override=0;
@@ -775,8 +805,8 @@ public:     //构造析构
         for(int i = 0; i < rows; ++i){
             for(int j = 0; j < cols; ++j){
                 double v = dense.get(i, j);
-                if(!isInStoredRegion(i, j) && v != 0.0)
-                    throw std::invalid_argument("Matrix does not match triangular type for UpperTriangularMatrix");
+                // if(!isInStoredRegion(i, j) && v != 0.0)
+                //     throw std::invalid_argument("Matrix does not match triangular type for UpperTriangularMatrix");
                 if(isInStoredRegion(i, j))
                     set(i, j, v);
             }
@@ -821,17 +851,17 @@ public:     //实现父类AbstractTriangularMatrix未实现的爷爷类的方法
     }
 
 public:    // 上三角矩阵特有的方法
-    //求解Ax=b
+    //求解Ax=b(b支持多组解)
     std::unique_ptr<AbstractMatrix> solve(const AbstractMatrix& b) const {
-        // 回代法求解上三角系统 Ux = b
+        // 回代法求解上三角系统 Ux = b （Ux=y）
         if (b.getRows() != rows) {
             throw std::invalid_argument("Dimension mismatch");
         }
         
         auto x = std::make_unique<Matrix>(rows, b.getCols());
         
-        for (int k = 0; k < b.getCols(); ++k) {
-            for (int i = rows - 1; i >= 0; --i) {
+        for (int k = 0; k < b.getCols(); ++k) {     //第一层循环，遍历不同的b_1,b_2 ......
+            for (int i = rows - 1; i >= 0; --i) {   //第二层循环,从最后一行开始往上遍历
                 double sum = 0.0;
                 for (int j = i + 1; j < cols; ++j) {
                     sum += get(i, j) * x->get(j, k);
@@ -890,8 +920,8 @@ public:     //构造析构
         for(int i = 0; i < rows; ++i){
             for(int j = 0; j < cols; ++j){
                 double v = dense.get(i, j);
-                if(!isInStoredRegion(i, j) && v != 0.0)
-                    throw std::invalid_argument("Matrix does not match triangular type for LowerTriangularMatrix");
+                // if(!isInStoredRegion(i, j) && v != 0.0)
+                //     throw std::invalid_argument("Matrix does not match triangular type for LowerTriangularMatrix");
                 if(isInStoredRegion(i, j))
                     set(i, j, v);
             }
@@ -936,6 +966,32 @@ public:     //实现父类AbstractTriangularMatrix未实现的爷爷类的方法
     }
 
 public:    //下三角矩阵特有的方法
+    //下三角的求解，常用于LU-->Ly=b,同样支持多组解
+    std::unique_ptr<AbstractMatrix> solve(const AbstractMatrix& b) const{
+        // 回代法求解上三角系统 Ly=b
+        if (b.getRows() != rows) {
+            throw std::invalid_argument("Dimension mismatch");
+        }
+        
+        auto y = std::make_unique<Matrix>(rows, b.getCols());
+        
+        for (int k = 0; k < b.getCols(); ++k) {     //第一层循环，遍历不同的b_1,b_2 ......
+            for (int i = 0; i < rows; ++i) {   //第二层循环,从第一行开始往下遍历
+                double sum = 0.0;
+                for (int j = 0; j < i; ++j) {
+                    sum += get(i, j) * y->get(j, k);
+                }
+                double diag = get(i, i);
+                if (diag == 0.0) {
+                    throw std::runtime_error("Matrix is singular");
+                }
+                y->set(i, k, (b.get(i, k) - sum) / diag);
+            }
+        }
+        
+        return y;
+    }
+
     //下三角矩阵与下三角矩阵相乘仍然是下三角矩阵
     std::unique_ptr<AbstractMatrix> multiplyLower(const LowerTriangularMatrix& other) const {
         if (cols != other.getRows())
@@ -958,11 +1014,12 @@ public:    //下三角矩阵特有的方法
 
 }//namespace MatCal::Utils
 
-namespace MatCal::Algorithm{
+namespace MatCal::Algorithm::Matrix{
     using Utils::AbstractMatrix;
     using Utils::Matrix;
     using Utils::SparseMatrix;
 
+//**************初等变换*********************
     //检查边界的辅助函数
     inline void checkRowBounds(int rows, int r) {
         if (r < 0 || r >= rows) {
@@ -974,104 +1031,247 @@ namespace MatCal::Algorithm{
             throw std::out_of_range("Column index out of bounds during elementary transformation.");
         }
     }
-
+    
     //行初等变换1: 行交换 R_r1 <-> R_r2
-    std::unique_ptr<AbstractMatrix> swapRows(const AbstractMatrix& A, int r1, int r2){
-        if (r1 == r2)   //相同行，返回副本
-            return A.toNormalMatrix();
+    void swapRows(AbstractMatrix& A, int r1, int r2) {
         checkRowBounds(A.getRows(), r1);
         checkRowBounds(A.getRows(), r2);
-        //转换为稠密矩阵副本进行操作，确保操作的通用性
-        auto result = dynamic_cast<Matrix*>(A.toNormalMatrix().release());
-        std::unique_ptr<AbstractMatrix> safe_result(result);
-        //执行行交换
-        std::swap((*result)[r1], (*result)[r2]);
-        return safe_result;
+        if (r1 == r2) return;
+
+        if (auto dense = dynamic_cast<Matrix*>(&A)) {
+            std::swap((*dense)[r1], (*dense)[r2]);
+            return;
+        }
+
+        auto result = A.toNormalMatrix();
+        auto dense = dynamic_cast<Matrix*>(result.get());
+        if (!dense)
+            throw std::runtime_error("toNormalMatrix() did not return a Matrix!");
+        std::swap((*dense)[r1], (*dense)[r2]);
+        A = *dense;
     }
 
-    //行初等变换2:行乘法 R_r <- scalar * R_r
-    std::unique_ptr<AbstractMatrix> scaleRow(const AbstractMatrix& A, int r, double scalar) {
-        if (scalar == 1.0)      //不变，返回副本
-            return A.toNormalMatrix();
+
+    //行初等变换2: 行乘法 R_r <- scalar * R_r
+    void scaleRow(AbstractMatrix& A, int r, double scalar) {
+        if (scalar == 1.0) return;
         checkRowBounds(A.getRows(), r);
-        //转换为稠密矩阵副本
-        auto result = dynamic_cast<Matrix*>(A.toNormalMatrix().release()); 
-        std::unique_ptr<AbstractMatrix> safe_result(result);
-        //执行行乘法
-        for(int j = 0; j < A.getCols(); ++j)
-            (*result)[r][j] *= scalar;
-        return safe_result;
+
+        if (auto dense = dynamic_cast<Matrix*>(&A)) {
+            for (int j = 0; j < dense->getCols(); ++j)
+                (*dense)[r][j] *= scalar;
+            return;
+        }
+
+        auto result = A.toNormalMatrix();
+        auto dense = dynamic_cast<Matrix*>(result.get());
+        if (!dense)
+            throw std::runtime_error("toNormalMatrix() did not return a Matrix!");
+
+        for (int j = 0; j < dense->getCols(); ++j)
+            (*dense)[r][j] *= scalar;
+
+        A = *dense;
     }
 
-    //行初等变换2:行加法 R_r_target <- R_r_target + scalar * R_r_source
-    std::unique_ptr<AbstractMatrix> addScaledRow(const AbstractMatrix& A, int r_target, int r_source, double scalar) {
-        if (scalar == 0.0 || r_target == r_source)
-            return A.toNormalMatrix();  //不变，返回副本
+
+    //行初等变换3: 行加法 R_r_target <- R_r_target + scalar * R_r_source
+    void addScaledRow(AbstractMatrix& A, int r_target, int r_source, double scalar) {
+        if (scalar == 0.0 || r_target == r_source) return;
         checkRowBounds(A.getRows(), r_target);
         checkRowBounds(A.getRows(), r_source);
-        //转换为稠密矩阵副本
-        auto result = dynamic_cast<Matrix*>(A.toNormalMatrix().release()); 
-        std::unique_ptr<AbstractMatrix> safe_result(result);
-        //执行加法
-        for (int j = 0; j < A.getCols(); ++j)
-            (*result)[r_target][j] += scalar * (*result)[r_source][j];
-        return safe_result;
+
+        if (auto dense = dynamic_cast<Matrix*>(&A)) {
+            for (int j = 0; j < dense->getCols(); ++j)
+                (*dense)[r_target][j] += scalar * (*dense)[r_source][j];
+            return;
+        }
+
+        auto result = A.toNormalMatrix();
+        auto dense = dynamic_cast<Matrix*>(result.get());
+        if (!dense)
+            throw std::runtime_error("toNormalMatrix() did not return a Matrix!");
+
+        for (int j = 0; j < dense->getCols(); ++j)
+            (*dense)[r_target][j] += scalar * (*dense)[r_source][j];
+
+        A = *dense;
     }
 
 
-    //初等列变换1: 列交换 C_c1 <-> C_c2
-    std::unique_ptr<AbstractMatrix> swapCols(const AbstractMatrix& A, int c1, int c2) {
-        if(c1 == c2)
-            return A.toNormalMatrix();
+    //列初等变换1: 列交换 C_c1 <-> C_c2
+    void swapCols(AbstractMatrix& A, int c1, int c2) {
+        if (c1 == c2) return;
         checkColBounds(A.getCols(), c1);
         checkColBounds(A.getCols(), c2);
 
-        auto result = dynamic_cast<Matrix*>(A.toNormalMatrix().release()); 
-        std::unique_ptr<AbstractMatrix> safe_result(result);
-        
-        int rows = A.getRows();
-        //遍历每一行，交换目标列的元素
-        for (int i = 0; i < rows; ++i)
-            std::swap((*result)[i][c1], (*result)[i][c2]);
-        return safe_result;
+        if (auto dense = dynamic_cast<Matrix*>(&A)) {
+            for (int i = 0; i < dense->getRows(); ++i)
+                std::swap((*dense)[i][c1], (*dense)[i][c2]);
+            return;
+        }
+
+        auto result = A.toNormalMatrix();
+        auto dense = dynamic_cast<Matrix*>(result.get());
+        if (!dense)
+            throw std::runtime_error("toNormalMatrix() did not return a Matrix!");
+
+        for (int i = 0; i < dense->getRows(); ++i)
+            std::swap((*dense)[i][c1], (*dense)[i][c2]);
+
+        A = *dense;
     }
 
-    //初等列变换 2: 列乘法 C_c <- scalar * C_c
-    std::unique_ptr<AbstractMatrix> scaleCol(const AbstractMatrix& A, int c, double scalar) {
-        if (scalar == 1.0) {
-            return A.toNormalMatrix();
-        }
+
+    //列初等变换2: 列乘法 C_c <- scalar * C_c
+    void scaleCol(AbstractMatrix& A, int c, double scalar) {
+        if (scalar == 1.0) return;
         checkColBounds(A.getCols(), c);
 
-        auto result = dynamic_cast<Matrix*>(A.toNormalMatrix().release()); 
-        std::unique_ptr<AbstractMatrix> safe_result(result);
+        if (auto dense = dynamic_cast<Matrix*>(&A)) {
+            for (int i = 0; i < dense->getRows(); ++i)
+                (*dense)[i][c] *= scalar;
+            return;
+        }
 
-        int rows = A.getRows();
-        //遍历每一行，缩放目标列的元素
-        for (int i = 0; i < rows; ++i)
-            (*result)[i][c] *= scalar;
-        return safe_result;
+        auto result = A.toNormalMatrix();
+        auto dense = dynamic_cast<Matrix*>(result.get());
+        if (!dense)
+            throw std::runtime_error("toNormalMatrix() did not return a Matrix!");
+
+        for (int i = 0; i < dense->getRows(); ++i)
+            (*dense)[i][c] *= scalar;
+
+        A = *dense;
     }
 
-    //初等列变换 3: 列加法 C_c_target <- C_c_target + scalar * C_c_source
-    std::unique_ptr<AbstractMatrix> addScaledCol(const AbstractMatrix& A, int c_target, int c_source, double scalar) {
-        if (scalar == 0.0 || c_target == c_source)
-            return A.toNormalMatrix();
+
+    //列初等变换3: 列加法 C_c_target <- C_c_target + scalar * C_c_source
+    void addScaledCol(AbstractMatrix& A, int c_target, int c_source, double scalar) {
+        if (scalar == 0.0 || c_target == c_source) return;
         checkColBounds(A.getCols(), c_target);
         checkColBounds(A.getCols(), c_source);
 
-        auto result = dynamic_cast<Matrix*>(A.toNormalMatrix().release()); 
-        std::unique_ptr<AbstractMatrix> safe_result(result);
+        if (auto dense = dynamic_cast<Matrix*>(&A)) {
+            for (int i = 0; i < dense->getRows(); ++i)
+                (*dense)[i][c_target] += scalar * (*dense)[i][c_source];
+            return;
+        }
 
-        int rows = A.getRows();
-        //遍历每一行，执行列加法
-        for (int i = 0; i < rows; ++i)
-            (*result)[i][c_target] += scalar * (*result)[i][c_source];
-        return safe_result;
+        auto result = A.toNormalMatrix();
+        auto dense = dynamic_cast<Matrix*>(result.get());
+        if (!dense)
+            throw std::runtime_error("toNormalMatrix() did not return a Matrix!");
+
+        for (int i = 0; i < dense->getRows(); ++i)
+            (*dense)[i][c_target] += scalar * (*dense)[i][c_source];
+
+        A = *dense;
+    }
+
+    //按照记录的行交换操作对矩阵 M 进行多次行变换
+    // 参数 reverse=true 表示按相反顺序执行，用于“还原”矩阵
+    void applyRowSwaps(AbstractMatrix& M, const std::vector<std::pair<int,int>>& swaps, bool reverse = false) {
+        int rows = M.getRows();
+
+        if (swaps.empty()) return;
+
+        // 决定迭代方向
+        if (!reverse) {
+            // 正向重放：重现高斯消元过程中的行交换
+            for (const auto& [r1, r2] : swaps) {
+                checkRowBounds(rows, r1);
+                checkRowBounds(rows, r2);
+                if (r1 != r2) swapRows(M, r1, r2);
+            }
+        } else {
+            // 逆向重放：按相反顺序还原为原始顺序
+            for (auto it = swaps.rbegin(); it != swaps.rend(); ++it) {
+                int r1 = it->first;
+                int r2 = it->second;
+                checkRowBounds(rows, r1);
+                checkRowBounds(rows, r2);
+                if (r1 != r2) swapRows(M, r1, r2);
+            }
+        }
     }
 
 
-}//namespace MatCal::Algorithm
+
+//**********************线性方程组求解****************
+
+    //列主元消去法求解Ax=b
+    //列主元解一次方程(支持一次多组求解),求解交给上三角矩阵来做，所以不会除以对角元素
+    std::unique_ptr<AbstractMatrix> solve_columnElimination(AbstractMatrix& A,AbstractMatrix& b){
+        //一共rows轮次
+        int rows=A.getRows();
+        int col_a=A.getCols();
+        int col_b=b.getCols();
+        for(int i=0;i<rows;++i){
+            //每一轮选取col==row的列，在row>=i区域进行行初等变换
+            int index=i;
+            for(int j=i;j<rows;++j)
+                if(std::abs(A.get(j, i))>std::abs(A.get(index, i)))
+                    index=j;
+            swapRows(A,index,i);
+            swapRows(b,index,i);
+            //高斯消元
+            for(int j = i + 1; j < rows; ++j){  //从当前行之后的所有行
+                double factor = A.get(j, i) / A.get(i, i);
+                for (int k = i; k < col_a; ++k)
+                    A.set(j,k,A.get(j,k)-factor*A.get(i, k));   //更新矩阵 A
+                for(int cb=0;cb<col_b;++cb)
+                    b.set(j,cb,b.get(j,cb)-factor*b.get(i,cb)); //更新向量 b
+            }
+        }
+        auto dense = dynamic_cast<Matrix*>(&A);
+        MatCal::Utils::UpperTriangularMatrix U(*dense);
+        return U.solve(b);
+    }
+
+
+    //列主元解多次方程，返回的是上三角矩阵和初等变换的记录
+    std::pair<std::unique_ptr<AbstractMatrix>,std::vector<std::pair<int,int>>> solve_columnElimination_multi(AbstractMatrix& A) {
+        int rows = A.getRows();
+        int colsA = A.getCols();
+        std::vector<std::pair<int,int>> swaps; //记录所有行交换
+
+        for (int i = 0; i < rows; ++i) {
+            // 1. 选择当前列的主元
+            int pivot = i;
+            for (int j = i + 1; j < rows; ++j)
+                if (std::abs(A.get(j, i)) > std::abs(A.get(pivot, i)))
+                    pivot = j;
+
+            // 2. 行交换（如果必要）
+            if (pivot != i) {
+                swapRows(A, pivot, i);
+                swaps.emplace_back(i, pivot);
+            }
+
+            double pivotVal = A.get(i, i);
+            if (std::abs(pivotVal) < 1e-12)
+                throw std::runtime_error("Matrix is singular or nearly singular");
+
+            // 3. 高斯消元
+            for (int j = i + 1; j < rows; ++j) {
+                double factor = A.get(j, i) / pivotVal;
+                for (int k = i; k < colsA; ++k)
+                    A.set(j, k, A.get(j, k) - factor * A.get(i, k));
+            }
+        }
+
+        // 4. 提取上三角矩阵
+        auto dense = dynamic_cast<Matrix*>(&A);
+        auto U = std::make_unique<MatCal::Utils::UpperTriangularMatrix>(*dense);
+
+        return {std::move(U), swaps};
+    }
+
+    //LU分解
+
+
+}//namespace MatCal::Algorithm::Matrix
 
 
 #endif//MATRIX_HPP
