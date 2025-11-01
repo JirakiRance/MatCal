@@ -95,7 +95,7 @@ public:
     virtual std::unique_ptr<AbstractMatrix> scalarMultiply(double scalar)const=0;
     virtual std::unique_ptr<AbstractMatrix> operator*(double scalar)const=0;
     //转置矩阵（纯虚函数）
-    virtual std::unique_ptr<AbstractMatrix> transpose()const=0;
+    //virtual std::unique_ptr<AbstractMatrix> transpose()const=0;
     //判断是否是方阵
     virtual bool isSquare()const{return rows==cols;}
 };//class AbstractMatrix
@@ -287,7 +287,7 @@ public:     //抽象方法实现
     }
 
     //内置的转置运算
-    std::unique_ptr<AbstractMatrix> transpose()const override{
+    std::unique_ptr<AbstractMatrix> transpose()const {
         auto result = std::make_unique<Matrix>(cols, rows);
         for(int i = 0; i < rows; ++i){
             for(int j = 0; j < cols; ++j){
@@ -543,12 +543,9 @@ public:     //抽象方法实现
     std::unique_ptr<AbstractMatrix> operator*(double scalar) const override{
         return this->scalarMultiply(scalar);
     }
-    friend std::unique_ptr<AbstractMatrix> operator*(double scalar,AbstractMatrix&matrix){
-        return matrix.scalarMultiply(scalar);
-    }
 
     //内置的矩阵转置
-    std::unique_ptr<AbstractMatrix> transpose() const override{
+    std::unique_ptr<AbstractMatrix> transpose() const {
         auto result = std::make_unique<SparseMatrix>(cols, rows);
         for (const auto& elem : elements)
             result->set(elem.col, elem.row, elem.value);
@@ -645,7 +642,7 @@ protected:  //纯虚函数 - 子类必须实现
     virtual std::unique_ptr<AbstractTriangularMatrix> createEmptyClone() const = 0;
 public:     //构造析构
     //普通构造
-    AbstractTriangularMatrix(int size) : AbstractMatrix(size, size){
+    AbstractTriangularMatrix(int size=0) : AbstractMatrix(size, size){
         int elementCount = size * (size + 1) / 2;
         data.resize(elementCount, 0.0);
     }
@@ -751,15 +748,16 @@ public:     //实现父类AbstractMatrix的方法
     std::unique_ptr<AbstractMatrix> operator*(double scalar) const override{
         return this->scalarMultiply(scalar);
     }
-    friend std::unique_ptr<AbstractMatrix> operator*(double scalar,AbstractMatrix&matrix){
-        return matrix.scalarMultiply(scalar);
-    }
 
 
     //转置，继续往下抛
-    std::unique_ptr<AbstractMatrix> transpose() const override=0;
+    //std::unique_ptr<AbstractMatrix> transpose() const override=0;
 
 public:     //三角矩阵实例对象特有的方法
+    const std::vector<double> getData()const{
+        return this->data;
+    }
+
     //计算行列式（对角线相乘）
     double determinant() const{
         double det = 1.0;
@@ -798,7 +796,10 @@ protected:      //父类虚函数实现
     }
 
 public:     //构造析构
-    UpperTriangularMatrix(int size) : AbstractTriangularMatrix(size) {}
+    UpperTriangularMatrix(int size=0) : AbstractTriangularMatrix(size) {}
+    UpperTriangularMatrix(UpperTriangularMatrix&u){
+        this->data=u.getData();
+    }
     UpperTriangularMatrix(const Matrix& dense) : AbstractTriangularMatrix(dense.getRows()){
         if(!dense.isSquare())
             throw std::invalid_argument("Triangular matrix must be square");
@@ -842,13 +843,7 @@ public:     //实现父类AbstractTriangularMatrix未实现的爷爷类的方法
     }
 
     //转置，上三角矩阵转置后变成下三角矩阵
-    std::unique_ptr<AbstractMatrix> transpose() const override {
-        auto result = std::make_unique<LowerTriangularMatrix>(rows);
-        for (int i = 0; i < rows; ++i)
-            for (int j = i; j < cols; ++j)  //只遍历上三角
-                result->set(j, i, get(i, j)); //行列互换
-        return result;
-    }
+    std::unique_ptr<LowerTriangularMatrix> transpose()const ;
 
 public:    // 上三角矩阵特有的方法
     //求解Ax=b(b支持多组解)
@@ -895,7 +890,6 @@ public:    // 上三角矩阵特有的方法
     }
 };//class UpperTriangularMatrix
 
-
 //特殊矩阵:下三角矩阵
 class LowerTriangularMatrix : public AbstractTriangularMatrix {
 protected:      //父类虚函数实现
@@ -913,7 +907,10 @@ protected:      //父类虚函数实现
     }
 
 public:     //构造析构
-    LowerTriangularMatrix(int size) : AbstractTriangularMatrix(size) {}
+    LowerTriangularMatrix(int size=0) : AbstractTriangularMatrix(size) {}
+    LowerTriangularMatrix(LowerTriangularMatrix&l){
+        this->data=l.getData();
+    }
     LowerTriangularMatrix(const Matrix& dense) : AbstractTriangularMatrix(dense.getRows()) {
         if(!dense.isSquare())
             throw std::invalid_argument("Triangular matrix must be square");
@@ -957,13 +954,7 @@ public:     //实现父类AbstractTriangularMatrix未实现的爷爷类的方法
     }
 
     //转置，下三角矩阵转置后变成上三角矩阵
-    std::unique_ptr<AbstractMatrix> transpose() const override {
-        auto result = std::make_unique<UpperTriangularMatrix>(rows);
-        for (int i = 0; i < rows; ++i)
-            for (int j = 0; j <= i; ++j)        //只遍历下三角
-                result->set(j, i, get(i, j));   //行列互换
-        return result;
-    }
+    std::unique_ptr<UpperTriangularMatrix> transpose() const ;
 
 public:    //下三角矩阵特有的方法
     //下三角的求解，常用于LU-->Ly=b,同样支持多组解
@@ -993,7 +984,7 @@ public:    //下三角矩阵特有的方法
     }
 
     //下三角矩阵与下三角矩阵相乘仍然是下三角矩阵
-    std::unique_ptr<AbstractMatrix> multiplyLower(const LowerTriangularMatrix& other) const {
+    std::unique_ptr<LowerTriangularMatrix> multiplyLower(const LowerTriangularMatrix& other) const {
         if (cols != other.getRows())
             throw std::invalid_argument("Matrix dimensions incompatible for multiplication");
         auto result = std::make_unique<LowerTriangularMatrix>(rows);
@@ -1010,10 +1001,27 @@ public:    //下三角矩阵特有的方法
     }
 };//class LowerTriangularMatrix
 
-
-
 }//namespace MatCal::Utils
 
+namespace MatCal::Utils {
+// UpperTriangularMatrix::transpose() 的实现
+std::unique_ptr<LowerTriangularMatrix> UpperTriangularMatrix::transpose() const {
+    auto result = std::make_unique<LowerTriangularMatrix>(rows);
+    for (int i = 0; i < rows; ++i)
+        for (int j = i; j < cols; ++j)
+            result->set(j, i, get(i, j)); 
+    return result; // 移出后不需要 std::move
+}
+
+// LowerTriangularMatrix::transpose() 的实现
+std::unique_ptr<UpperTriangularMatrix> LowerTriangularMatrix::transpose() const {
+    auto result = std::make_unique<UpperTriangularMatrix>(rows);
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j <= i; ++j)
+            result->set(j, i, get(i, j)); 
+    return result; // 移出后不需要 std::move
+}
+}
 namespace MatCal::Algorithm::Matrix{
     using Utils::AbstractMatrix;
     using Utils::Matrix;
@@ -1268,7 +1276,114 @@ namespace MatCal::Algorithm::Matrix{
         return {std::move(U), swaps};
     }
 
-    //LU分解
+    //LU分解结果类
+    struct LUresult{
+        MatCal::Utils::LowerTriangularMatrix L;
+        MatCal::Utils::UpperTriangularMatrix U;
+        LUresult(MatCal::Utils::LowerTriangularMatrix&l,MatCal::Utils::UpperTriangularMatrix&u){
+            L=l;
+            U=u;
+        }
+        std::unique_ptr<AbstractMatrix> solve(AbstractMatrix&x){
+            return U.solve(*L.solve(x));
+        }
+    };
+    //LU分解,返回LU分解结果类
+    // LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12) {
+    //     int rows = A.getRows();
+    //     int cols = A.getCols();
+        
+    //     //初始化L和U
+    //     auto L = std::make_unique<MatCal::Utils::LowerTriangularMatrix>(rows);
+    //     auto U = std::make_unique<MatCal::Utils::UpperTriangularMatrix>(rows);
+        
+    //     //对A进行LU分解
+    //     for (int i = 0; i < rows; ++i) {
+    //         //查找最大主元
+    //         int pivot = i;
+    //         for (int j = i + 1; j < rows; ++j) {
+    //             if (std::abs(A.get(j, i)) > std::abs(A.get(pivot, i))) {
+    //                 pivot = j;
+    //             }
+    //         }
+    //         //如果主元为零，矩阵奇异
+    //         if (std::abs(A.get(pivot, i)) < eps) {
+    //             throw std::runtime_error("Matrix is singular or nearly singular");
+    //         }
+    //         // 行交换：在 A 上执行
+    //         if (pivot != i) {
+    //             swapRows(A, pivot, i);
+    //         }
+
+    //         // 计算 U 的元素
+    //         for (int j = i; j < cols; ++j) {
+    //             U->set(i, j, A.get(i, j));  // U 的上三角部分
+    //         }
+
+    //         // 计算 L 的元素
+    //         for (int j = i + 1; j < rows; ++j) {
+    //             double factor = A.get(j, i) / A.get(i, i);
+    //             L->set(j, i, factor);  // L 的下三角部分
+    //             for (int k = i; k < cols; ++k) {
+    //                 A.set(j, k, A.get(j, k) - factor * A.get(i, k));  // 消去 A 的元素
+    //             }
+    //         }
+    //     }
+
+    //     //返回LU结果
+    //     return LUresult(*L,*U);
+    // }
+    LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12) {
+        int rows = A.getRows();
+        int cols = A.getCols();
+        
+        if (rows != cols) {
+            throw std::invalid_argument("LU Decomposition requires a square matrix.");
+        }
+
+        // 初始化 L 和 U
+        // L (LowerTriangularMatrix) 默认下三角存储，非存储区域为 0
+        // U (UpperTriangularMatrix) 默认上三角存储，非存储区域为 0
+        auto L = std::make_unique<MatCal::Utils::LowerTriangularMatrix>(rows);
+        auto U = std::make_unique<MatCal::Utils::UpperTriangularMatrix>(rows);
+        
+        // 对 A 进行 LU 分解
+        for (int i = 0; i < rows; ++i) {
+            // 1. 设置 L 矩阵的对角线 L_ii = 1.0 (Doolittle)
+            L->set(i, i, 1.0); 
+
+            // 2. 检查主元，避免除零
+            double pivot = A.get(i, i);
+            if (std::abs(pivot) < eps) {
+                throw std::runtime_error("Matrix is singular or near singular, cannot perform A=LU decomposition without pivoting.");
+            }
+
+            // 3. 计算 U 的元素 (U_ij = A_ij - sum(L_ik * U_kj))
+            // 在此处，我们将 A 的当前行作为 U 的行，但需要减去 L U 的点积贡献
+            for (int j = i; j < cols; ++j) { // 从对角线开始，计算 U 的行
+                double sum = 0.0;
+                for (int k = 0; k < i; ++k) {
+                    sum += L->get(i, k) * U->get(k, j);
+                }
+                double u_ij = A.get(i, j) - sum;
+                U->set(i, j, u_ij);
+            }
+
+            // 4. 计算 L 的元素 (L_ji = (A_ji - sum(L_jk * U_ki)) / U_ii)
+            // 从下一行开始，计算 L 的列
+            for (int j = i + 1; j < rows; ++j) {
+                double sum = 0.0;
+                for (int k = 0; k < i; ++k) {
+                    sum += L->get(j, k) * U->get(k, i);
+                }
+                double l_ji = (A.get(j, i) - sum) / U->get(i, i);
+                L->set(j, i, l_ji);
+            }
+        }
+
+        // 返回 LU 结果
+        return LUresult(*L, *U);
+    }
 
 
 }//namespace MatCal::Algorithm::Matrix
