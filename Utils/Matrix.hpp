@@ -195,7 +195,7 @@ public:     //抽象方法实现
         std::cout << "\nMatrix:"<<rows <<"x"<<cols<<":\n";
         for(int i = 0; i < rows; ++i){
             for(int j = 0; j < cols; ++j)
-                std::cout<<std::setw(10)<<std::setprecision(4)<<data[i][j] << " ";
+                std::cout<<std::setw(10)<<std::setprecision(6)<<data[i][j] << " ";
             std::cout<<"\n";
         }
     }
@@ -213,7 +213,7 @@ public:     //抽象方法实现
         for (int i = 0; i < rows; ++i) {
             json << "    [";
             for (int j = 0; j < cols; ++j) {
-                json << std::fixed << std::setprecision(6) << data[i][j];
+                json << std::fixed << std::setprecision(8) << data[i][j];
                 if (j < cols - 1) {
                     json << ", ";
                 }
@@ -460,7 +460,7 @@ public:     //抽象方法实现
         json << "  \"rows\": " << rows << ",\n";
         json << "  \"cols\": " << cols << ",\n";
         json << "  \"nonZeroCount\": " << nonZeroCount << ",\n";
-        json << "  \"sparsity\": " << std::fixed << std::setprecision(4) 
+        json << "  \"sparsity\": " << std::fixed << std::setprecision(8) 
              << (1.0 - static_cast<double>(nonZeroCount) / (rows * cols)) << ",\n";
         json << "  \"elements\": [\n";
         
@@ -468,7 +468,7 @@ public:     //抽象方法实现
             const auto& elem = elements[i];
             json << "    {\"row\": " << elem.row 
                  << ", \"col\": " << elem.col 
-                 << ", \"value\": " << std::fixed << std::setprecision(6) << elem.value << "}";
+                 << ", \"value\": " << std::fixed << std::setprecision(8) << elem.value << "}";
             if (i < elements.size() - 1) {
                 json << ",";
             }
@@ -823,13 +823,13 @@ public:     //实现父类AbstractTriangularMatrix未实现的爷爷类的方法
         json << "  \"type\": \"UpperTriangularMatrix\",\n";
         json << "  \"size\": " << rows << ",\n";
         json << "  \"storageSize\": " << data.size() << ",\n";
-        json << "  \"determinant\": " << std::fixed << std::setprecision(6) << determinant() << ",\n";
+        json << "  \"determinant\": " << std::fixed << std::setprecision(8) << determinant() << ",\n";
         json << "  \"data\": [\n";
         
         for (int i = 0; i < rows; ++i) {
             json << "    [";
             for (int j = 0; j < cols; ++j) {
-                json << std::fixed << std::setprecision(6) << get(i, j);
+                json << std::fixed << std::setprecision(8) << get(i, j);
                 if (j < cols - 1) json << ", ";
             }
             json << "]";
@@ -934,13 +934,13 @@ public:     //实现父类AbstractTriangularMatrix未实现的爷爷类的方法
         json << "  \"type\": \"LowerTriangularMatrix\",\n";
         json << "  \"size\": " << rows << ",\n";
         json << "  \"storageSize\": " << data.size() << ",\n";
-        json << "  \"determinant\": " << std::fixed << std::setprecision(6) << determinant() << ",\n";
+        json << "  \"determinant\": " << std::fixed << std::setprecision(8) << determinant() << ",\n";
         json << "  \"data\": [\n";
         
         for (int i = 0; i < rows; ++i) {
             json << "    [";
             for (int j = 0; j < cols; ++j) {
-                json << std::fixed << std::setprecision(6) << get(i, j);
+                json << std::fixed << std::setprecision(8) << get(i, j);
                 if (j < cols - 1) json << ", ";
             }
             json << "]";
@@ -1205,6 +1205,93 @@ namespace MatCal::Algorithm::Matrix{
     }
 
 
+//求解矩阵范数
+    //一范数（列范数）
+    double norm_one(AbstractMatrix&matrix){
+        //需要先转化成普通矩阵
+        if(typeid(matrix)!=typeid(Matrix)){
+            auto ret=matrix.toNormalMatrix();
+            auto dense=dynamic_cast<Matrix*>(ret.get());
+
+            double max=0;
+            for(int j=0;j<dense->getCols();++j){
+                double sum=0;
+                for(int i=0;i<dense->getRows();++i)
+                    sum+=std::abs(dense->get(i,j));
+                if(sum>max)
+                    max=sum;
+            }
+            return max;
+        }else{
+            double max=0;
+            for(int j=0;j<matrix.getCols();++j){
+                double sum=0;
+                for(int i=0;i<matrix.getRows();++i)
+                    sum+=std::abs(matrix.get(i,j));
+                if(sum>max)
+                    max=sum;
+            }
+            return max;
+        }
+    }
+
+    //无穷范数（行范数）
+    double norm_infinite(AbstractMatrix&matrix){
+        //需要先转化成普通矩阵
+        if(typeid(matrix)!=typeid(Matrix)){
+            auto ret=matrix.toNormalMatrix();
+            auto dense=dynamic_cast<Matrix*>(ret.get());
+
+            double max=0;
+            for(int i=0;i<dense->getRows();++i){
+                double sum=0;
+                for(int j=0;j<dense->getCols();++j)
+                    sum+=std::abs(dense->get(i,j));
+                if(sum>max)
+                    max=sum;
+            }
+            return max;
+        }else{
+            double max=0;
+            for(int i=0;i<matrix.getRows();++i){
+                double sum=0;
+                for(int j=0;j<matrix.getCols();++j)
+                    sum+=std::abs(matrix.get(i,j));
+                if(sum>max)
+                    max=sum;
+            }
+            return max;
+        }
+    }
+
+    // F范数
+    double norm_Frobenius(AbstractMatrix& matrix){
+        double sum = 0.0;
+        if(auto dense = dynamic_cast<Matrix*>(&matrix)){
+            for(int i=0;i<dense->getRows();++i){
+                for (int j = 0; j < dense->getCols(); ++j){
+                    double val = dense->get(i, j);
+                    sum+=val*val;
+                }
+            }
+        }else{
+            auto converted = matrix.toNormalMatrix();
+            auto dense_ptr = dynamic_cast<Matrix*>(converted.get());
+            if (!dense_ptr)
+                throw std::runtime_error("Failed to convert to normal matrix");
+            
+            for(int i=0;i<dense_ptr->getRows();++i){
+                for(int j=0;j<dense_ptr->getCols();++j){
+                    double val = dense_ptr->get(i,j);
+                    sum+=val*val;
+                }
+            }
+        }
+        return std::sqrt(sum);
+    }
+
+
+
 
 //**********************线性方程组求解****************
 
@@ -1238,8 +1325,8 @@ namespace MatCal::Algorithm::Matrix{
     }
 
 
-    //列主元解多次方程，返回的是上三角矩阵和初等变换的记录
-    std::pair<std::unique_ptr<AbstractMatrix>,std::vector<std::pair<int,int>>> solve_columnElimination_multi(AbstractMatrix& A) {
+    //列主元解多次方程，返回的是变换后的上三角矩阵和初等变换的记录
+    std::pair<std::unique_ptr<AbstractMatrix>,std::vector<std::pair<int,int>>> columnElimination_Transformation(AbstractMatrix& A) {
         int rows = A.getRows();
         int colsA = A.getCols();
         std::vector<std::pair<int,int>> swaps; //记录所有行交换
@@ -1384,6 +1471,154 @@ namespace MatCal::Algorithm::Matrix{
         // 返回 LU 结果
         return LUresult(*L, *U);
     }
+
+    //迭代法求解线性方程组
+    //迭代结果类,包含  {找到的解，迭代次数，最终误差，是否收敛}，考虑到解是向量，存储使用Matrix，不返回迭代序列（空间占用太大）
+    struct Iteration_Result{
+        Matrix root;        //找到的解
+        int iterations;     //迭代次数
+        double error;       //最终误差,默认采用一范数（每一列都要成立）
+        bool converged;     //是否收敛
+    };
+    //Jacobi法
+    Iteration_Result Jacobi(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
+        //转换为普通矩阵
+        auto converted_A = A.toNormalMatrix();
+        auto converted_b = b.toNormalMatrix();
+        auto dense_A = dynamic_cast<Matrix*>(converted_A.get());
+        auto dense_b = dynamic_cast<Matrix*>(converted_b.get());
+        if (!dense_A||!dense_b)
+            throw std::runtime_error("Failed to convert matrices to dense format");
+        
+        int n = dense_A->getRows();
+        int sets=dense_b->getCols();
+        //提取对角矩阵D
+        auto D = std::make_unique<Matrix>(n, n);
+        for(int i = 0; i < n; ++i)
+            D->set(i,i,dense_A->get(i,i));
+        
+        //构造L+U (A = D + L + U, 所以 L+U = A - D)
+        auto LU = std::make_unique<Matrix>(n, n);
+        for (int i = 0; i < n; ++i){
+            for(int j = 0; j < n; ++j){
+                if(i == j){
+                    LU->set(i,j,0.0);
+                }else{
+                    LU->set(i,j, dense_A->get(i, j));
+                }
+            }
+        }
+        
+        //计算迭代矩阵 J = -D^(-1)(L+U)  以及g=D^(-1)b
+        auto J = std::make_unique<Matrix>(n,n);
+        auto g = std::make_unique<Matrix>(n,sets);
+        for(int i = 0; i < n; ++i){
+            double diag_val = D->get(i, i);
+            if(std::abs(diag_val) < 1e-12)
+                throw std::runtime_error("Zero diagonal element found, Jacobi method fails");
+            for(int j = 0; j < n; ++j){
+                J->set(i, j, -LU->get(i, j) / diag_val);
+            }
+            for(int k=0;k<sets;++k)
+                g->set(i,k, dense_b->get(i,k) / diag_val);
+        }
+
+        //初始化迭代
+        auto x = std::make_unique<Matrix>(n, sets);  // 初始解向量，全零
+        Iteration_Result result;
+
+        //Jacobi迭代: x^(k+1) = J * x^(k) + g
+        for(int iteration=1;iteration<=max_iterations;++iteration){
+            //将AbstractMatrix转换为Matrix
+            auto x_new_abstract = J->multiply(*x)->add(*g);
+            auto x_new_matrix = dynamic_cast<Matrix*>(x_new_abstract.get());
+            if (!x_new_matrix)
+                throw std::runtime_error("Matrix operation returned unexpected type");
+            auto x_new = std::make_unique<Matrix>(*x_new_matrix);
+            //计算误差（一范数：每一列的最大绝对误差）
+            auto delta_x=x_new->add(*(x->scalarMultiply(-1)));
+            double eps=norm_one(*delta_x);
+            //更新解
+            *x=*x_new;
+            //检查收敛
+            if(eps < epsilon){
+                result.converged=true;
+                result.iterations=iteration;
+                result.error=eps;
+                result.root=*x;
+                return result;
+            }
+        }
+        //未收敛
+        result.converged=false;
+        result.iterations=max_iterations;
+        result.error=-1;//表示未收敛
+        result.root=*x;
+        return result;
+    }
+
+    //Gauss-Seidel(不使用矩阵方法了，因为求矩阵的逆不好求且不稳定，与其求逆不如直接对A求逆)
+    Iteration_Result Gauss_Seidel(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
+        //转换为普通矩阵
+        auto converted_A = A.toNormalMatrix();
+        auto converted_b = b.toNormalMatrix();
+        auto dense_A = dynamic_cast<Matrix*>(converted_A.get());
+        auto dense_b = dynamic_cast<Matrix*>(converted_b.get());
+        if (!dense_A||!dense_b)
+            throw std::runtime_error("Failed to convert matrices to dense format");
+        
+        int n = dense_A->getRows();
+        int sets=dense_b->getCols();
+       
+        //初始化迭代
+        auto x = std::make_unique<Matrix>(n, sets);
+        Iteration_Result result;
+
+        //开始迭代
+        for(int iteration=1;iteration<=max_iterations;++iteration){
+            auto x_new=std::make_unique<Matrix>(*x);
+            //每一组解
+            for(int k=0;k<sets;++k){
+                //每个方程
+               for(int i=0;i<n;++i){
+                    double sum = 0.0;
+                    for(int j=0;j<i;++j)
+                        sum += dense_A->get(i,j)*x_new->get(j,k);
+                    for(int j=i+1;j<n;++j)
+                        sum += dense_A->get(i,j)*x->get(j,k);
+                    double diag_val = dense_A->get(i,i);
+                    if(std::abs(diag_val)<1e-12)
+                        throw std::runtime_error("Zero diagonal element found, Gauss-Seidel method fails");
+                    double new_val=(dense_b->get(i,k)-sum)/diag_val;
+                    x_new->set(i,k, new_val);
+                }//for i
+            }//for k
+            //计算误差
+            auto delta_x_abstract = x->add(*(x_new->scalarMultiply(-1)));
+            auto delta_x_ptr = dynamic_cast<Matrix*>(delta_x_abstract.get());
+            if (!delta_x_ptr)
+                throw std::runtime_error("Matrix operation returned unexpected type");
+            double eps = norm_one(*delta_x_ptr);
+            //更新解
+            *x=*x_new;
+            //检查收敛
+            if(eps < epsilon) {
+                result.converged = true;
+                result.iterations = iteration;
+                result.error = eps;
+                result.root = *x;
+                return result;
+            }
+
+        }//for iteration
+        // 未收敛
+        result.converged = false;
+        result.iterations = max_iterations;
+        result.error = -1;
+        result.root = *x;
+        return result;
+    }
+
 
 
 }//namespace MatCal::Algorithm::Matrix
