@@ -151,7 +151,37 @@ public:     //构造函数和析构
         data=other.getData();
     }
 
+    Matrix(std::initializer_list<std::initializer_list<double>> init)
+        : AbstractMatrix(init.size(), init.size() > 0 ? init.begin()->size() : 0) {
+        
+        data.resize(rows);
+        int i = 0;
+        for (const auto& row : init) {
+            data[i].resize(cols);
+            int j = 0;
+            for (const auto& elem : row) {
+                data[i][j] = elem;
+                ++j;
+            }
+            // 填充剩余列为零
+            for (; j < cols; ++j) {
+                data[i][j] = 0.0;
+            }
+            ++i;
+        }
+    }
+
     //赋值运算符
+    // Matrix& operator=(const std::vector<std::vector<double>>& input){
+    //     //验证所有行长度一致
+    //     for(size_t i = 1;i<input.size();++i){
+    //         if(input[i].size()!=input[0].size()){
+    //             throw std::invalid_argument("All rows should have the same length");
+    //         }
+    //     }
+    //     data=input;
+    //     return *this;
+    // }
     Matrix& operator=(const Matrix& other) {
         if(this != &other){
             rows = other.getRows();
@@ -1302,26 +1332,28 @@ namespace MatCal::Algorithm::Matrix{
         int rows=A.getRows();
         int col_a=A.getCols();
         int col_b=b.getCols();
+        auto A_copy=A.toNormalMatrix();
+        auto b_copy=b.toNormalMatrix();
         for(int i=0;i<rows;++i){
             //每一轮选取col==row的列，在row>=i区域进行行初等变换
             int index=i;
             for(int j=i;j<rows;++j)
-                if(std::abs(A.get(j, i))>std::abs(A.get(index, i)))
+                if(std::abs(A_copy->get(j, i))>std::abs(A_copy->get(index, i)))
                     index=j;
-            swapRows(A,index,i);
-            swapRows(b,index,i);
+            swapRows(*A_copy,index,i);
+            swapRows(*b_copy,index,i);
             //高斯消元
             for(int j = i + 1; j < rows; ++j){  //从当前行之后的所有行
-                double factor = A.get(j, i) / A.get(i, i);
+                double factor = A_copy->get(j, i) / A_copy->get(i, i);
                 for (int k = i; k < col_a; ++k)
-                    A.set(j,k,A.get(j,k)-factor*A.get(i, k));   //更新矩阵 A
+                    A_copy->set(j,k,A_copy->get(j,k)-factor*A_copy->get(i, k));   //更新矩阵 A
                 for(int cb=0;cb<col_b;++cb)
-                    b.set(j,cb,b.get(j,cb)-factor*b.get(i,cb)); //更新向量 b
+                    b_copy->set(j,cb,b_copy->get(j,cb)-factor*b_copy->get(i,cb)); //更新向量 b
             }
         }
-        auto dense = dynamic_cast<Matrix*>(&A);
+        auto dense = dynamic_cast<Matrix*>(A_copy.get());
         MatCal::Utils::UpperTriangularMatrix U(*dense);
-        return U.solve(b);
+        return U.solve(*b_copy);
     }
 
 

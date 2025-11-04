@@ -251,6 +251,115 @@ void test_MatrixOperations() {
     E->show();
 }
 
+void test1104(){
+    Matrix A({
+        {2,6},
+        {2,1e-4}
+    });
+
+    Matrix b1={
+        {8},
+        {8.00001}
+    };
+
+    Matrix b2={
+        {8},
+        {8.00002}
+    };
+
+    auto lu=LU_Decompose(A);
+    auto ret_ce=solve_columnElimination(A,b1);
+    auto ret_gs=Gauss_Seidel(A,b1);
+    //cE
+    std::cout<<"\nret_ce is:\n"<<ret_ce->toString()<<"\n\n";
+    //GS
+    std::cout<<"\nret_gs:\nconverged:"<<ret_gs.converged<<"\nerror:"<<ret_gs.error<<"\niterations:"<<ret_gs.iterations<<"\n\nret is:"<<ret_gs.root.toString()<<"\n\n";
+    //LU
+    std::cout<<"\n\n x1:\n"<<lu.solve(b1)->toString()<<"\n";
+    std::cout<<"\n\n x2:\n"<<lu.solve(b2)->toString()<<"\n";
+}
+
+void test_isolation() {
+    std::cout << "=== 隔离测试 ===" << std::endl;
+    
+    // 测试1: 只运行CE
+    {
+        Matrix A({{2,6},{2,1e-4}});
+        Matrix b1({{8},{8.00001}});
+        auto ret_ce = solve_columnElimination(A, b1);
+        std::cout << "单独CE解: " << ret_ce->toString() << std::endl;
+    }
+    
+    // 测试2: 只运行LU  
+    {
+        Matrix A({{2,6},{2,1e-4}});
+        Matrix b1({{8},{8.00001}});
+        auto lu = LU_Decompose(A);
+        auto x_lu = lu.solve(b1);
+        std::cout << "单独LU解: " << x_lu->toString() << std::endl;
+    }
+    
+    // 测试3: 只运行Jacobi
+    {
+        Matrix A({{2,6},{2,1e-4}});
+        Matrix b1({{8},{8.00001}});
+        auto ret_jacobi = Jacobi(A, b1);
+        std::cout << "单独Jacobi解: " << ret_jacobi.root.toString() << std::endl;
+        std::cout << "收敛: " << ret_jacobi.converged << std::endl;
+    }
+}
+
+void test_with_fresh_objects() {
+    std::cout << "=== 使用全新对象测试 ===" << std::endl;
+    
+    // 场景1: CE开启
+    {
+        Matrix A_fresh({{2,6},{2,1e-4}});
+        Matrix b1_fresh({{8},{8.00001}});
+
+        A_fresh.show();
+        b1_fresh.show();
+        
+        auto ret_ce = solve_columnElimination(A_fresh, b1_fresh);
+        std::cout << "CE解: " << ret_ce->toString() << std::endl;
+
+        A_fresh.show();
+        b1_fresh.show();
+        
+        auto ret_jacobi = Jacobi(A_fresh, b1_fresh);
+        std::cout << "Jacobi收敛: " << ret_jacobi.converged << std::endl;
+        std::cout << "Jacobi解: " << ret_jacobi.root.toString() << std::endl;
+
+        A_fresh.show();
+        b1_fresh.show();
+        
+        auto lu = LU_Decompose(A_fresh);
+        auto x_lu = lu.solve(b1_fresh);
+        std::cout << "LU解: " << x_lu->toString() << std::endl;
+
+        A_fresh.show();
+        b1_fresh.show();
+    }
+    
+    std::cout << "---" << std::endl;
+    
+    // 场景2: CE关闭（注释掉）
+    {
+        Matrix A_fresh({{2,6},{2,1e-4}});
+        Matrix b1_fresh({{8},{8.00001}});
+        
+        // auto ret_ce = solve_columnElimination(A_fresh, b1_fresh); // 注释掉
+        
+        auto ret_jacobi = Jacobi(A_fresh, b1_fresh);
+        std::cout << "Jacobi收敛: " << ret_jacobi.converged << std::endl;
+        std::cout << "Jacobi解: " << ret_jacobi.root.toString() << std::endl;
+        
+        auto lu = LU_Decompose(A_fresh);
+        auto x_lu = lu.solve(b1_fresh);
+        std::cout << "LU解: " << x_lu->toString() << std::endl;
+    }
+}
+
 int main() {
     std::cout << "矩阵计算库测试程序" << std::endl;
     std::cout << "==================" << std::endl;
@@ -258,7 +367,10 @@ int main() {
     try {
         //test_MatrixOperations();
         //test_Jacobi();
-        test_Gauss_Seidel();
+        //test_Gauss_Seidel();
+        test1104();
+        //test_isolation();
+        //test_with_fresh_objects();
         
         std::cout << "\n=== 所有测试完成 ===" << std::endl;
         
