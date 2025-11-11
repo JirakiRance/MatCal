@@ -1651,6 +1651,73 @@ namespace MatCal::Algorithm::Matrix{
         return result;
     }
 
+    //SOR方法，需要传入omega参数，0<omega<2
+    Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100) {
+        if (omega >= 2 || omega <= 0) {
+            throw std::invalid_argument("omega should be in (0,2) !");
+        }
+        
+        //转换为普通矩阵
+        auto converted_A = A.toNormalMatrix();
+        auto converted_b = b.toNormalMatrix();
+        auto dense_A = dynamic_cast<Matrix*>(converted_A.get());
+        auto dense_b = dynamic_cast<Matrix*>(converted_b.get());
+        if (!dense_A || !dense_b)
+            throw std::runtime_error("Failed to convert matrices to dense format");
+
+        int n = dense_A->getRows();
+        int sets = dense_b->getCols();
+
+        //初始化迭代
+        auto x = std::make_unique<Matrix>(n, sets);
+        Iteration_Result result;
+
+        //开始迭代
+        for (int iteration = 1; iteration <= max_iterations; ++iteration) {
+            auto x_new = std::make_unique<Matrix>(*x);
+            //每一组解
+            for (int k = 0; k < sets; ++k) {
+                //每个方程
+                for (int i = 0; i < n; ++i) {
+                    double sum = 0.0;
+                    for (int j = 0; j < i; ++j)
+                        sum += dense_A->get(i, j) * x_new->get(j, k);
+                    for (int j = i + 1; j < n; ++j)
+                        sum += dense_A->get(i, j) * x->get(j, k);
+                    double diag_val = dense_A->get(i, i);
+                    if (std::abs(diag_val) < 1e-12)
+                        throw std::runtime_error("Zero diagonal element found, SOR method fails");
+                    double gauss = (dense_b->get(i, k) - sum) / diag_val;//相对于Gauss,只改了这两行
+                    double new_val = gauss * omega + (1 - omega) * dense_A->get(i, k);
+                    x_new->set(i, k, new_val);
+                }//for i
+            }//for k
+            //计算误差
+            auto delta_x_abstract = x->add(*(x_new->scalarMultiply(-1)));
+            auto delta_x_ptr = dynamic_cast<Matrix*>(delta_x_abstract.get());
+            if (!delta_x_ptr)
+                throw std::runtime_error("Matrix operation returned unexpected type");
+            double eps = norm_one(*delta_x_ptr);
+            //更新解
+            *x = *x_new;
+            //检查收敛
+            if (eps < epsilon) {
+                result.converged = true;
+                result.iterations = iteration;
+                result.error = eps;
+                result.root = *x;
+                return result;
+            }
+
+        }//for iteration
+        // 未收敛
+        result.converged = false;
+        result.iterations = max_iterations;
+        result.error = -1;
+        result.root = *x;
+        return result;
+    
+    }
 
 
 }//namespace MatCal::Algorithm::Matrix
