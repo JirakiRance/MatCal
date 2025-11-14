@@ -124,6 +124,21 @@ public:
         this->parameters = temp;
         this->cleanup();
     }
+    //构造函数,从系数A和零点序列std::vector<double> zeros构造
+    QinJiuShao(int A,std::vector<double>& zeros){
+        if(std::abs(A)>QinJiuShaoNode::ZERO_THRESHOLD){
+            QinJiuShao res={{0,1}};
+            for(int i=0;i<zeros.size();++i){
+                QinJiuShao zero={{1,1},{0,-zeros[i]}};
+                res=res * zero;
+            }
+            res = res * A;
+            this->parameters = res.getParameters();
+        }else{
+            QinJiuShao q;
+            this->parameters = q.getParameters();
+        }
+    }
     //拷贝构造函数
     QinJiuShao(const QinJiuShao& qin){
         this->parameters = qin.getParameters();

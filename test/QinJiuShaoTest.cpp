@@ -1,4 +1,4 @@
-#include "..\QinJiuShao.hpp"
+#include "..\src\QinJiuShao.hpp"
 #include <iostream>
 #include <cmath>
 #include <iomanip>

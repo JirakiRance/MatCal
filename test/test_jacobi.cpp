@@ -1,4 +1,4 @@
-#include "..\Matrix.hpp"
+#include "..\src\Matrix.hpp"
 #include <iostream>
 
 using namespace MatCal::Utils;

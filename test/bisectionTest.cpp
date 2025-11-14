@@ -1,5 +1,5 @@
-#include "..\QinJiuShao.hpp"
-#include "..\Algorithms\Jiraki_Algorithm.hpp"
+#include "..\src\QinJiuShao.hpp"
+#include "..\src\Iteration.hpp"
 #include <iostream>
 #include <cmath>
 #include <iomanip>
@@ -25,7 +25,7 @@ void testSimplePolynomial() {
     std::cout << "\n使用二分法在区间 [1.0, 2.0] 求根..." << std::endl;
     
     try {
-        auto result = MatCal::Algorithm::Bisection::solveDetailed(polyFunc, 1.0, 2.0, 1e-12, 100);
+        auto result = MatCal::Algorithm::Iteration::Bisection::solveDetailed(polyFunc, 1.0, 2.0, 1e-12, 100);
         
         std::cout << "求根结果:" << std::endl;
         std::cout << "  根: " << result.root << std::endl;
@@ -87,7 +87,7 @@ void testComplexPolynomial() {
     std::cout << "\n使用二分法在区间 [1.0, 2.0] 求根..." << std::endl;
     
     try {
-        auto result = MatCal::Algorithm::Bisection::solveDetailed(polyFunc, 1.0, 2.0, 1e-10, 200);
+        auto result = MatCal::Algorithm::Iteration::Bisection::solveDetailed(polyFunc, 1.0, 2.0, 1e-10, 200);
         
         std::cout << "求根结果:" << std::endl;
         std::cout << "  根: " << result.root << std::endl;

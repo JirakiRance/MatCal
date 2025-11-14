@@ -4,11 +4,11 @@
 
 namespace MatCal {
     namespace Utils {
-        //ÇØ¾ÅÉØ½áµã£¬ÓÃÓÚÇØ¾ÅÉØ¶àÏîÊ½
+        //ç§¦ä¹éŸ¶ç»“ç‚¹ï¼Œç”¨äºç§¦ä¹éŸ¶å¤šé¡¹å¼
         class QinJiuShaoNode;
-        //ÇØ¾ÅÉØ¶àÏîÊ½£¬Ìá¹©¼ÆËãº¯ÊıÖµ£¬·µ»Ø¶àÏîÊ½º¯Êı(´´½¨Í¨ÓÃº¯Êı)µÈ·şÎñ
+        //ç§¦ä¹éŸ¶å¤šé¡¹å¼ï¼Œæä¾›è®¡ç®—å‡½æ•°å€¼ï¼Œè¿”å›å¤šé¡¹å¼å‡½æ•°(åˆ›å»ºé€šç”¨å‡½æ•°)ç­‰æœåŠ¡
         class QinJiuShao;
-        //Lagrange²åÖµ¶àÏîÊ½Ln(x),»ùÓÚÇØ¾ÅÉØÊµÏÖ
+        //Lagrangeæ’å€¼å¤šé¡¹å¼Ln(x),åŸºäºç§¦ä¹éŸ¶å®ç°
         class LagrangeInsert;
     }
 }
@@ -16,13 +16,13 @@ namespace MatCal {
 
 namespace MatCal::Utils {
 
-//Lagrange²åÖµ¶àÏîÊ½Ln(x),»ùÓÚÇØ¾ÅÉØÊµÏÖ
-    class LagrangeInsert {
+//Lagrangeæ’å€¼å¤šé¡¹å¼Ln(x),åŸºäºç§¦ä¹éŸ¶å®ç°
+class LagrangeInsert {
         using Poly=MatCal::Utils::QinJiuShao;
         using PolyNode=MatCal::Utils::QinJiuShaoNode;
-    //¹¹ÔìºÍÎö¹¹
+    //æ„é€ å’Œææ„
     public:
-        //Ä¬ÈÏ¹¹Ôì
+        //é»˜è®¤æ„é€ 
         LagrangeInsert(int degree_of_poly = 2) {
             if (degree_of_poly > 2) {
                 this->degree = 2;
@@ -31,24 +31,24 @@ namespace MatCal::Utils {
                 this->degree = 2;
             }
         }
-        //´Óstd::vector<std::pair<double,double>>Ö¸¶¨µÄx,yĞòÁĞ¹¹Ôì
+        //ä»std::vector<std::pair<double,double>>æŒ‡å®šçš„x,yåºåˆ—æ„é€ 
         LagrangeInsert(std::vector<std::pair<double, double>>& data) {
             this->construct_from_vector(data);
         }
-        //´Óstd::initializer_list<std::pair<double,double>>Ö¸¶¨µÄx,yĞòÁĞ¹¹Ôì
+        //ä»std::initializer_list<std::pair<double,double>>æŒ‡å®šçš„x,yåºåˆ—æ„é€ 
         LagrangeInsert(std::initializer_list<std::pair<double,double>> pairs) {
             std::vector<std::pair<double, double>> data = pairs;
             this->construct_from_vector(data);
         }
-        //Îö¹¹£¬²»ÓÃ¹Ü
+        //ææ„ï¼Œä¸ç”¨ç®¡
         ~LagrangeInsert() {}
-    //¹«¹²·½·¨
+    //å…¬å…±æ–¹æ³•
     public:
-        //¼ÆËã²åÖµ
+        //è®¡ç®—æ’å€¼
         double calculate(double x) {
             return this->poly.calculate(x);
         }
-        //gettet·½·¨
+        //gettetæ–¹æ³•
         const int getDegree()const {
             return this->degree;
         }
@@ -56,39 +56,39 @@ namespace MatCal::Utils {
             return this->poly;
         }
 
-    //ÄÚ²¿Î¬»¤µÄ·½·¨
+    //å†…éƒ¨ç»´æŠ¤çš„æ–¹æ³•
     private:
         void construct_from_vector(std::vector<std::pair<double, double>>& data) {
             if (data.size() < 2) {
                 throw std::invalid_argument("poly terms should at least >= 2!");
             }
             this->degree = data.size() - 1;
-            //´´½¨n+1¸öl_i(x)ÔÙÏà¼Ó
+            //åˆ›å»ºn+1ä¸ªl_i(x)å†ç›¸åŠ 
             std::vector<Poly> li_x(this->degree+1);
             for (int i = 0; i <= this->degree; ++i) {//li
-                //´´½¨ÏµÊı
+                //åˆ›å»ºç³»æ•°
                 double coee = data[i].second;
-                //´´½¨Ö÷Ê½(Êı×Ö1)
+                //åˆ›å»ºä¸»å¼(æ•°å­—1)
                 Poly li({
                     { 0, 1 }
                     });
                 for (int j = 0; j <= this->degree; ++j) {
                     if (i == j)
                         continue;
-                    //³ıÒÔÏµÊı
+                    //é™¤ä»¥ç³»æ•°
                     coee /= (data[i].first - data[j].first);
-                    //³ËÒÔÉÏÊ½
+                    //ä¹˜ä»¥ä¸Šå¼
                     li = li * Poly({
                         { 1 , 1 }, { 0 , - data[j].first }
                         });
                 }
-                //×îºó³ËÒÔÏµÊı
+                //æœ€åä¹˜ä»¥ç³»æ•°
                 li = li * coee;
-                //¼ÓÈëli_x
+                //åŠ å…¥li_x
                 li_x[i] = li;
             }//li
 
-            //×îºó¼ÓÆğÀ´
+            //æœ€ååŠ èµ·æ¥
             Poly Ln_x = *li_x.begin();
             for (int i = 1; i <= this->degree; ++i) {
                 Ln_x = Ln_x + li_x[i];
@@ -96,10 +96,10 @@ namespace MatCal::Utils {
             this->poly = Ln_x;
         }
 
-    //ÄÚ²¿Î¬»¤µÄÊôĞÔ
+    //å†…éƒ¨ç»´æŠ¤çš„å±æ€§
     private:
-        int degree;   //Ln(x) ´ÎÊın
-        Poly poly;    //¶àÏîÊ½½á¹¹£¬ÓÉÇØ¾ÅÉØÎ¬»¤
+        int degree;   //Ln(x) æ¬¡æ•°n
+        Poly poly;    //å¤šé¡¹å¼ç»“æ„ï¼Œç”±ç§¦ä¹éŸ¶ç»´æŠ¤
     };//class LagrangeInsert
 
 }//namespace MatCal::Utils

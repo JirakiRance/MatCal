@@ -1,9 +1,9 @@
-#ifndef JIRAKI_ALGORITHM_HPP
-#define JIRAKI_ALGORITHM_HPP
+#ifndef ITERATION_HPP
+#define ITERATION_HPP
 
 /*
 
-本文件实现了一些算法
+本文件实现了一些迭代算法
 
 */
 
@@ -15,18 +15,20 @@
 
 namespace MatCal{
     namespace Algorithm{
-        //二分法，支持传入一个函数，一个区间，一个，求解一个零点，可以按需求传入精度，最大迭代步数，不保证有解，无解会抛出异常
-        class Bisection;
-        //Picard收敛法（简单迭代法），用于迭代求解形如  x=\varphi(x)的形式，不保证有解，无解会抛出异常
-        class Picard;
-        //牛顿迭代法
-        class Newton;
-        //割线法
-        class Secant;
+        namespace Iteration{
+            //二分法，支持传入一个函数，一个区间，一个，求解一个零点，可以按需求传入精度，最大迭代步数，不保证有解，无解会抛出异常
+            class Bisection;
+            //Picard收敛法（简单迭代法），用于迭代求解形如  x=\varphi(x)的形式，不保证有解，无解会抛出异常
+            class Picard;
+            //牛顿迭代法
+            class Newton;
+            //割线法
+            class Secant;
+        }
     }
 }
 
-namespace MatCal::Algorithm{
+namespace MatCal::Algorithm::Iteration{
 
 class Bisection{
 public:
@@ -353,5 +355,5 @@ public:
 };
 
 
-}//namespace MatCal::Algorithm
-#endif//JIRAKI_ALGORITHM_HPP
+}//namespace MatCal::Algorithm::Iteration
+#endif//ITERATION_HPP
