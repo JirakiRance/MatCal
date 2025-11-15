@@ -941,6 +941,9 @@ public:     //构造析构
     LowerTriangularMatrix(LowerTriangularMatrix&l){
         this->data=l.getData();
     }
+    LowerTriangularMatrix(const LowerTriangularMatrix& l){
+        this->data=l.getData();
+    }
     LowerTriangularMatrix(const Matrix& dense) : AbstractTriangularMatrix(dense.getRows()) {
         if(!dense.isSquare())
             throw std::invalid_argument("Triangular matrix must be square");
