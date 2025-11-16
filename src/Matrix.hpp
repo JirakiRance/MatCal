@@ -1359,43 +1359,56 @@ namespace MatCal::Algorithm::Matrix{
         return U.solve(*b_copy);
     }
 
-
-    //列主元解多次方程，返回的是变换后的上三角矩阵和初等变换的记录
+    //列主元解多次方程，返回的是变换后的上三角矩阵和初等变换的记录,不会对A变换（如果要变换，请applyRowSwaps）
     std::pair<std::unique_ptr<AbstractMatrix>,std::vector<std::pair<int,int>>> columnElimination_Transformation(AbstractMatrix& A) {
         int rows = A.getRows();
         int colsA = A.getCols();
         std::vector<std::pair<int,int>> swaps; //记录所有行交换
 
+        auto A_copy=A.toNormalMatrix();
+
         for (int i = 0; i < rows; ++i) {
             // 1. 选择当前列的主元
             int pivot = i;
             for (int j = i + 1; j < rows; ++j)
-                if (std::abs(A.get(j, i)) > std::abs(A.get(pivot, i)))
+                if (std::abs(A_copy->get(j, i)) > std::abs(A_copy->get(pivot, i)))
                     pivot = j;
 
             // 2. 行交换（如果必要）
             if (pivot != i) {
-                swapRows(A, pivot, i);
+                swapRows(*A_copy, pivot, i);
                 swaps.emplace_back(i, pivot);
             }
 
-            double pivotVal = A.get(i, i);
+            double pivotVal = A_copy->get(i, i);
             if (std::abs(pivotVal) < 1e-12)
                 throw std::runtime_error("Matrix is singular or nearly singular");
 
             // 3. 高斯消元
             for (int j = i + 1; j < rows; ++j) {
-                double factor = A.get(j, i) / pivotVal;
+                double factor = A_copy->get(j, i) / pivotVal;
                 for (int k = i; k < colsA; ++k)
-                    A.set(j, k, A.get(j, k) - factor * A.get(i, k));
+                    A_copy->set(j, k, A_copy->get(j, k) - factor * A_copy->get(i, k));
             }
         }
 
         // 4. 提取上三角矩阵
-        auto dense = dynamic_cast<Matrix*>(&A);
+        auto dense = dynamic_cast<Matrix*>(&(*A_copy));
         auto U = std::make_unique<MatCal::Utils::UpperTriangularMatrix>(*dense);
 
         return {std::move(U), swaps};
+    }
+
+    //借助列主元的快速行列式求解
+    double determinant(AbstractMatrix& A){
+        if(!A.isSquare())
+            throw std::invalid_argument("Matrix should be squre!");
+        auto [upper,log]=columnElimination_Transformation(A);
+        int n=A.getCols();
+        double ret=1.0;
+        for(int i=0;i<n;++i)
+            ret*=upper->get(i,i);
+        return ret;
     }
 
     //LU分解结果类
