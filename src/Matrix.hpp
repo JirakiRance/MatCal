@@ -36,7 +36,7 @@ namespace MatCal{
         //特殊矩阵:下三角矩阵
         class LowerTriangularMatrix;
         //特殊矩阵:三对角矩阵
-        //class TridiagonalMatrix;
+        class TridiagonalMatrix;
     }
     namespace Algorithm{
         //初等行变换
@@ -262,7 +262,9 @@ public:     //抽象方法实现
 
     //转换成普通矩阵,普通矩阵直接返回自己,你不用调用了
     std::unique_ptr<AbstractMatrix> toNormalMatrix() const override{
-        return std::make_unique<Matrix>(*this);
+        //修改，需要拷贝一份，不能直接返回*this
+        Matrix copy=*this;
+        return std::make_unique<Matrix>(copy);
     }
 
     //内置的矩阵加法，时间复杂度O(n^2)*(+)
@@ -1034,6 +1036,218 @@ public:    //下三角矩阵特有的方法
     }
 };//class LowerTriangularMatrix
 
+
+//特殊矩阵:三对角矩阵
+class TridiagonalMatrix : public AbstractMatrix {
+protected:
+    std::vector<double> l;   // 下对角线，长度 n-1
+    std::vector<double> d;   // 主对角线，长度 n
+    std::vector<double> u;   // 上对角线，长度 n-1
+public:
+    /*-------- 构造 / 析构 --------*/
+    TridiagonalMatrix(int n = 0) : AbstractMatrix(n, n) {
+        if (n < 0) throw std::invalid_argument("n must be non-negative");
+        resize(n, n);
+    }
+
+    // 从三条对角线构造
+    TridiagonalMatrix(const std::vector<double>& lower,
+                      const std::vector<double>& diag,
+                      const std::vector<double>& upper)
+        : AbstractMatrix(diag.size(), diag.size()),
+          l(lower), d(diag), u(upper) {
+        int n = static_cast<int>(d.size());
+        if (static_cast<int>(l.size()) != n - 1 ||
+            static_cast<int>(u.size()) != n - 1)
+            throw std::invalid_argument("Diagonal size mismatch");
+        rows = cols = n;
+    }
+
+    // 从普通 Matrix 提取三对角部分
+    explicit TridiagonalMatrix(const Matrix& mat)
+        : AbstractMatrix(mat.getRows(), mat.getCols()) {
+        if (!mat.isSquare())
+            throw std::invalid_argument("Tridiagonal matrix must be square");
+        int n = mat.getRows();
+        l.resize(n - 1);
+        d.resize(n);
+        u.resize(n - 1);
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                double v = mat.get(i, j);
+                if (i == j) d[i] = v;
+                else if (i == j + 1) l[i - 1] = v;
+                else if (i + 1 == j) u[j - 1] = v;
+                else if (std::abs(v) > 1e-14)
+                    throw std::invalid_argument("Matrix is not tridiagonal");
+            }
+        }
+    }
+
+    virtual ~TridiagonalMatrix() = default;
+
+    /*-------- AbstractMatrix 接口 --------*/
+    void resize(int newRows, int newCols) override {
+        if (newRows != newCols)
+            throw std::invalid_argument("Tridiagonal matrix must be square");
+        if (newRows < 0)
+            throw std::invalid_argument("Size must be non-negative");
+        rows = cols = newRows;
+        int n = newRows;
+        l.resize(n - 1);
+        d.resize(n);
+        u.resize(n - 1);
+        std::fill(l.begin(), l.end(), 0.0);
+        std::fill(d.begin(), d.end(), 0.0);
+        std::fill(u.begin(), u.end(), 0.0);
+    }
+
+    double get(int row, int col) const override {
+        checkIndex(row, col);
+        if (row == col) return d[row];
+        if (row == col + 1) return l[row - 1];
+        if (row + 1 == col) return u[col - 1];
+        return 0.0;
+    }
+
+    void set(int row, int col, double value) override {
+        checkIndex(row, col);
+        if (row == col) d[row] = value;
+        else if (row == col + 1) l[row - 1] = value;
+        else if (row + 1 == col) u[col - 1] = value;
+        else if (std::abs(value) > 1e-14)
+            throw std::invalid_argument("Cannot set non-zero outside tridiagonal");
+    }
+
+    std::unique_ptr<AbstractMatrix> toNormalMatrix() const override {
+        auto dense = std::make_unique<Matrix>(rows, cols);
+        for (int i = 0; i < rows; ++i) {
+            dense->set(i, i, d[i]);
+            if (i > 0) dense->set(i, i - 1, l[i - 1]);
+            if (i + 1 < cols) dense->set(i, i + 1, u[i]);
+        }
+        return dense;
+    }
+
+    void show() const override {
+        auto tmp = toNormalMatrix();
+        tmp->show();
+    }
+
+    std::string toString() const override {
+        std::ostringstream os;
+        os << "{\n"
+           << "  \"type\": \"TridiagonalMatrix\",\n"
+           << "  \"size\": " << rows << ",\n"
+           << "  \"lower\": " << vec2str(l) << ",\n"
+           << "  \"diag\": " << vec2str(d) << ",\n"
+           << "  \"upper\": " << vec2str(u) << "\n"
+           << "}";
+        return os.str();
+    }
+
+    /*-------- 运算接口（返回普通 Matrix） --------*/
+    std::unique_ptr<AbstractMatrix> add(const AbstractMatrix& other) const override {
+        if (rows != other.getRows() || cols != other.getCols())
+            throw std::invalid_argument("Dimension mismatch");
+        auto res = std::make_unique<Matrix>(rows, cols);
+        for (int i = 0; i < rows; ++i)
+            for (int j = 0; j < cols; ++j)
+                res->set(i, j, get(i, j) + other.get(i, j));
+        return res;
+    }
+
+    std::unique_ptr<AbstractMatrix> multiply(const AbstractMatrix& other) const override {
+        if (cols != other.getRows())
+            throw std::invalid_argument("Dimension mismatch");
+        auto res = std::make_unique<Matrix>(rows, other.getCols());
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < other.getCols(); ++j) {
+                double s = 0.0;
+                // 三对角每行最多 3 个非零
+                for (int k = std::max(0, i - 1); k <= std::min(cols - 1, i + 1); ++k)
+                    s += get(i, k) * other.get(k, j);
+                res->set(i, j, s);
+            }
+        }
+        return res;
+    }
+
+    std::unique_ptr<AbstractMatrix> operator*(const AbstractMatrix& other) const override {
+        return multiply(other);
+    }
+
+    std::unique_ptr<AbstractMatrix> scalarMultiply(double scalar) const override {
+        auto T = std::make_unique<TridiagonalMatrix>(rows);
+        for (size_t i = 0; i < l.size(); ++i) T->l[i] = l[i] * scalar;
+        for (size_t i = 0; i < d.size(); ++i) T->d[i] = d[i] * scalar;
+        for (size_t i = 0; i < u.size(); ++i) T->u[i] = u[i] * scalar;
+        return T;
+    }
+
+    std::unique_ptr<AbstractMatrix> operator*(double scalar) const override {
+        return scalarMultiply(scalar);
+    }
+
+    /*-------- 三对角专用求解 --------*/
+    // Thomas(chase) 算法解  T * X = B，X 与 B 同尺寸
+    std::unique_ptr<AbstractMatrix> solve(const AbstractMatrix& B) const {
+        if (B.getRows() != rows)
+            throw std::invalid_argument("Dimension not match");
+        int n = rows;
+        int nrhs = B.getCols();
+
+        //拷贝一份
+        std::vector<double> dl = l;
+        std::vector<double> dd = d;
+        std::vector<double> du = u;
+        auto X=B.toNormalMatrix();
+
+        //前消,构建LU
+        for (int i = 1; i < n; ++i) {
+            if (std::abs(dd[i - 1]) < 1e-14)
+                throw std::runtime_error("Zero pivot in Thomas(chase)");
+            dl[i - 1] = dl[i - 1] / dd[i - 1];
+            dd[i] -= dl[i - 1] * du[i - 1];
+            for (int k = 0; k < nrhs; ++k)
+                X->set(i, k, X->get(i, k) - dl[i - 1] * X->get(i - 1, k));
+        }
+        if (std::abs(dd.back()) < 1e-14)
+            throw std::runtime_error("Singular matrix in Thomas(chase)");
+
+        //回代,求解LU(不直接使用LU算法，那样就体现不出追赶法降低复杂度的特点了)
+        for (int k = 0; k < nrhs; ++k)
+            X->set(n - 1, k, X->get(n - 1, k) / dd.back());
+        for (int i = n - 2; i >= 0; --i)
+            for (int k = 0; k < nrhs; ++k) {
+                double tmp = (X->get(i, k) - du[i] * X->get(i + 1, k)) / dd[i];
+                X->set(i, k, tmp);
+            }
+        return X;
+    }
+
+    /*-------- 工具 --------*/
+    const std::vector<double>& lower() const { return l; }
+    const std::vector<double>& diag()  const { return d; }
+    const std::vector<double>& upper() const { return u; }
+
+private:
+    void checkIndex(int r, int c) const {
+        if (r < 0 || r >= rows || c < 0 || c >= cols)
+            throw std::out_of_range("Index out of range");
+    }
+    static std::string vec2str(const std::vector<double>& v) {
+        std::ostringstream o;
+        o << "[";
+        for (size_t i = 0; i < v.size(); ++i) {
+            o << std::fixed << std::setprecision(8) << v[i];
+            if (i + 1 < v.size()) o << ", ";
+        }
+        o << "]";
+        return o.str();
+    }
+};
+
 }//namespace MatCal::Utils
 
 namespace MatCal::Utils {
@@ -1424,50 +1638,6 @@ namespace MatCal::Algorithm::Matrix{
         }
     };
     //LU分解,返回LU分解结果类
-    // LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12) {
-    //     int rows = A.getRows();
-    //     int cols = A.getCols();
-        
-    //     //初始化L和U
-    //     auto L = std::make_unique<MatCal::Utils::LowerTriangularMatrix>(rows);
-    //     auto U = std::make_unique<MatCal::Utils::UpperTriangularMatrix>(rows);
-        
-    //     //对A进行LU分解
-    //     for (int i = 0; i < rows; ++i) {
-    //         //查找最大主元
-    //         int pivot = i;
-    //         for (int j = i + 1; j < rows; ++j) {
-    //             if (std::abs(A.get(j, i)) > std::abs(A.get(pivot, i))) {
-    //                 pivot = j;
-    //             }
-    //         }
-    //         //如果主元为零，矩阵奇异
-    //         if (std::abs(A.get(pivot, i)) < eps) {
-    //             throw std::runtime_error("Matrix is singular or nearly singular");
-    //         }
-    //         // 行交换：在 A 上执行
-    //         if (pivot != i) {
-    //             swapRows(A, pivot, i);
-    //         }
-
-    //         // 计算 U 的元素
-    //         for (int j = i; j < cols; ++j) {
-    //             U->set(i, j, A.get(i, j));  // U 的上三角部分
-    //         }
-
-    //         // 计算 L 的元素
-    //         for (int j = i + 1; j < rows; ++j) {
-    //             double factor = A.get(j, i) / A.get(i, i);
-    //             L->set(j, i, factor);  // L 的下三角部分
-    //             for (int k = i; k < cols; ++k) {
-    //                 A.set(j, k, A.get(j, k) - factor * A.get(i, k));  // 消去 A 的元素
-    //             }
-    //         }
-    //     }
-
-    //     //返回LU结果
-    //     return LUresult(*L,*U);
-    // }
     LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12) {
         int rows = A.getRows();
         int cols = A.getCols();
