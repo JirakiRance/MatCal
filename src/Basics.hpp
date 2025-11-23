@@ -58,7 +58,11 @@ public:
             sum+=pF_px(_func,xs,i,eps);
         return sum;
     }
+};
 
+//最小二乘法
+class Least_Square{
+public:
     class Result_least_square{
         public:
         std::vector<double> coee;
@@ -70,7 +74,7 @@ public:
 
     //计算线性的基于多项式的最小二乘法
     //版本1：带权重的完整多项式
-    static Result_least_square least_square(int degree,std::vector<double>& x,
+    static Result_least_square solve(int degree,std::vector<double>& x,
     std::vector<double>& y,
     std::vector<double>& weights ){
         if(degree <= 0 )
@@ -140,14 +144,14 @@ public:
     }
 
     //版本2：无权重的完整多项式
-    static Result_least_square least_square(int degree,std::vector<double>& x,
+    static Result_least_square solve(int degree,std::vector<double>& x,
     std::vector<double>& y){
         std::vector<double> weights(x.size(),1.0);
-        return least_square(degree,x,y,weights);
+        return solve(degree,x,y,weights);
     }
 
     // 版本3：带权重和选择项的多项式拟合
-    static Result_least_square least_square(int degree, std::vector<double>& x,
+    static Result_least_square solve(int degree, std::vector<double>& x,
         std::vector<double>& y, std::vector<double>& weights, 
         std::vector<bool>& selects) {
         
@@ -259,11 +263,11 @@ public:
     }
 
     // 版本4：无权重的选择项多项式拟合
-    static Result_least_square least_square(int degree, std::vector<double>& x,
+    static Result_least_square solve(int degree, std::vector<double>& x,
         std::vector<double>& y, std::vector<bool>& selects) {
         
         std::vector<double> weights(x.size(), 1.0);
-        return least_square(degree, x, y, weights, selects);
+        return solve(degree, x, y, weights, selects);
     }
 
 };
