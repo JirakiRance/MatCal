@@ -235,6 +235,21 @@ public:
         }
         std::cout<<std::endl;
     }
+    // toString方法 - 基于show方法的逻辑
+    std::string toString() const {
+        if(this->parameters.empty()){
+            return "0";
+        }
+        std::string result;
+        for(auto it=this->parameters.begin();it!=this->parameters.end();++it){
+            if(it->isFake()) continue;
+            if(it!=this->parameters.begin()&&it->a>0){
+                result += " + ";
+            }
+            result += it->toString();
+        }
+        return result;
+    }
     //获取所有参数,不可修改
     const std::vector<QinJiuShaoNode>& getParameters() const {
         return this->parameters;

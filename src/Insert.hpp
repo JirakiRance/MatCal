@@ -16,6 +16,8 @@ namespace MatCal {
             class NewtonInsert_Quotient;
             //Newton差分插值,基于秦九韶、矩阵实现
             class NewtonInsert_Finite;
+            //Hermite插值，适用于有导数的数据表
+            class Hermite;
         }
     }
 }
@@ -327,6 +329,141 @@ private:
     int degree = 0; //阶数
 };
 
+
+class Hermite{
+public:
+    using Poly=MatCal::Utils::QinJiuShao;
+    using PolyNode=MatCal::Utils::QinJiuShaoNode;
+//构造和析构
+public:
+    Hermite(int degree_of_poly = 2) {
+        if (degree_of_poly < 2) {
+            this->degree = 2;
+        }
+        else {
+            this->degree = degree_of_poly;
+        }
+    }
+    //从std::vector<std::pair<double,double>>指定的x,y序列构造
+    Hermite(std::vector<double>&xs,std::vector<double>&ys,std::vector<double>&dy_dxs) {
+        this->construct(xs,ys,dy_dxs);
+    }
+    //析构，不用管
+    ~Hermite() {}
+//公共的方法
+public:
+    //重新构造（给默认构造用）
+    void reconstruct(std::vector<double>& xs,
+                     std::vector<double>& ys,
+                     std::vector<double>& dy_dxs) {
+        construct(xs, ys, dy_dxs);
+    }
+
+     //计算插值
+    double calculate(double x) {
+        return this->poly.calculate(x);
+    }
+    //getter方法
+    const int getDegree()const {
+        return this->degree;
+    }
+    const Poly getPoly() const{
+        return this->poly;
+    }
+
+//内部维护的方法
+private:
+void construct(std::vector<double>& xs,
+                   std::vector<double>& ys,
+                   std::vector<double>& dy_dxs) {
+        int n = static_cast<int>(xs.size());
+        if (n < 2 || ys.size() != xs.size() || dy_dxs.size() != xs.size()) {
+            throw std::invalid_argument(
+                "Hermite: vector size should be >=2 "
+                "and xs, ys, dy_dxs size must match!");
+        }
+
+        // 检查节点是否重复
+        for (int i = 0; i < n; ++i) {
+            for (int j = i + 1; j < n; ++j) {
+                if (std::abs(xs[i] - xs[j]) < PolyNode::ZERO_THRESHOLD) {
+                    throw std::invalid_argument(
+                        "Hermite: duplicated x nodes detected!");
+                }
+            }
+        }
+
+        // 理论次数：2n - 1
+        this->degree = 2 * n - 1;
+
+        // 1. 先构造标准拉格朗日基函数 l_i(x)
+        std::vector<Poly> li_x(n);
+        std::vector<double> li_prime_at_xi(n);  // l_i'(x_i)
+
+        for (int i = 0; i < n; ++i) {
+            // li(x) 从常数 1 开始
+            Poly li({{0, 1.0}});
+            double denom = 1.0;
+
+            for (int j = 0; j < n; ++j) {
+                if (i == j) continue;
+                double diff = xs[i] - xs[j];
+                if (std::abs(diff) < PolyNode::ZERO_THRESHOLD) {
+                    throw std::invalid_argument(
+                        "Hermite: xs[i] - xs[j] too small, "
+                        "nodes too close or duplicated.");
+                }
+                denom *= diff;
+                // 乘 (x - x_j)
+                li = li * Poly({{1, 1.0}, {0, -xs[j]}});
+            }
+
+            // li(x) = ∏(x - x_j) / ∏(x_i - x_j)
+            li = li * (1.0 / denom);
+            li_x[i] = li;
+
+            // 求导并在 x_i 处评价： l_i'(x_i)
+            Poly dli = li.derivative();
+            li_prime_at_xi[i] = dli.calculate(xs[i]);
+        }
+
+        // 2. 用 l_i(x) 和 l_i'(x_i) 构造 Hermite 基函数
+        //    H_i(x) = (1 - 2(x - x_i) l_i'(x_i)) [l_i(x)]^2
+        //    \hat{H}_i(x) = (x - x_i)[l_i(x)]^2
+        Poly result;        // 默认构造应为 0 多项式
+        bool firstTerm = true;
+
+        for (int i = 0; i < n; ++i) {
+            Poly X_minus_xi({{1, 1.0}, {0, -xs[i]}});
+            Poly li_sq = li_x[i] * li_x[i];
+
+            // H_i(x)
+            Poly Hi = Poly({{0, 1.0}});                     // 1
+            Hi = Hi - (2.0 * li_prime_at_xi[i]) * X_minus_xi;  // 1 - 2 l_i'(x_i)(x - x_i)
+            Hi = Hi * li_sq;
+
+            // \hat{H}_i(x)
+            Poly Htilde = X_minus_xi * li_sq;
+
+            // y_i * H_i(x) + y'_i * \hat{H}_i(x)
+            Poly term = Hi * ys[i] + Htilde * dy_dxs[i];
+
+            if (firstTerm) {
+                result = term;
+                firstTerm = false;
+            } else {
+                result = result + term;
+            }
+        }
+
+        this->poly = result;
+    }
+
+//内部维护的属性
+private:
+    int degree;   //Ln(x) 次数n
+    Poly poly;    //多项式结构，由秦九韶维护
+};
 
 }//namespace MatCal::Algorithm::Insert
 #endif//INSERT_HPP
