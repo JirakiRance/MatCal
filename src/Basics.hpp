@@ -272,6 +272,97 @@ public:
 
 };
 
+// ======================================================
+// 3. 数值积分（RK4）
+// ======================================================
+namespace Integrate {
+
+class RK4 {
+public:
+    // 通用向量版本：y(n) -> dy/dt(n)
+    using RHS = std::function<void(const std::vector<double>& y,
+                                   std::vector<double>& dydt)>;
+
+    // 单步 RK4：给定 y, dt 和 RHS，计算 y_next
+    static void step(const RHS& f,
+                     const std::vector<double>& y,
+                     double dt,
+                     std::vector<double>& y_out)
+    {
+        const std::size_t n = y.size();
+        if (n == 0)
+            throw std::runtime_error("RK4::step: state dimension = 0");
+
+        std::vector<double> k1(n), k2(n), k3(n), k4(n), y_tmp(n);
+
+        // k1 = f(y)
+        f(y, k1);
+
+        // k2 = f(y + dt/2 * k1)
+        for (std::size_t i = 0; i < n; ++i)
+            y_tmp[i] = y[i] + 0.5 * dt * k1[i];
+        f(y_tmp, k2);
+
+        // k3 = f(y + dt/2 * k2)
+        for (std::size_t i = 0; i < n; ++i)
+            y_tmp[i] = y[i] + 0.5 * dt * k2[i];
+        f(y_tmp, k3);
+
+        // k4 = f(y + dt * k3)
+        for (std::size_t i = 0; i < n; ++i)
+            y_tmp[i] = y[i] + dt * k3[i];
+        f(y_tmp, k4);
+
+        // y_out = y + dt/6 * (k1 + 2k2 + 2k3 + k4)
+        y_out.resize(n);
+        const double c1 = dt / 6.0;
+        for (std::size_t i = 0; i < n; ++i) {
+            y_out[i] = y[i] + c1 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+        }
+    }
+
+    // 2 维系统专用版本： (theta, omega)
+    // f(theta, omega, dtheta, domega) 填写导数
+    using RHS2 = std::function<void(double theta, double omega,
+                                    double& dtheta, double& domega)>;
+
+    static void step2(const RHS2& f,
+                      double theta,
+                      double omega,
+                      double dt,
+                      double& theta_out,
+                      double& omega_out)
+    {
+        double k1_theta, k1_omega;
+        double k2_theta, k2_omega;
+        double k3_theta, k3_omega;
+        double k4_theta, k4_omega;
+
+        // k1
+        f(theta, omega, k1_theta, k1_omega);
+
+        // k2
+        f(theta + 0.5 * dt * k1_theta,
+          omega + 0.5 * dt * k1_omega,
+          k2_theta, k2_omega);
+
+        // k3
+        f(theta + 0.5 * dt * k2_theta,
+          omega + 0.5 * dt * k2_omega,
+          k3_theta, k3_omega);
+
+        // k4
+        f(theta + dt * k3_theta,
+          omega + dt * k3_omega,
+          k4_theta, k4_omega);
+
+        const double c1 = dt / 6.0;
+        theta_out = theta + c1 * (k1_theta + 2.0 * k2_theta + 2.0 * k3_theta + k4_theta);
+        omega_out = omega + c1 * (k1_omega + 2.0 * k2_omega + 2.0 * k3_omega + k4_omega);
+    }
+};
+
+}//namespace MatCal::Algorithm::Basics::Integrate
 
 }//namespace MatCal::Algorithm::Basics
 

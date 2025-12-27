@@ -465,5 +465,311 @@ private:
     Poly poly;    //多项式结构，由秦九韶维护
 };
 
+
+//==============================================================
+//  Cubic Spline 插值（默认：自然边界样条 Natural Spline）
+//==============================================================
+class CubicSpline {
+public:
+    using Matrix = MatCal::Utils::Matrix;
+    using Poly   = MatCal::Utils::QinJiuShao;
+
+//--------------------------------------------------------------
+// 构造与析构
+//--------------------------------------------------------------
+public:
+    CubicSpline() = default;
+
+    CubicSpline(const std::vector<double>& xs,
+                const std::vector<double>& ys)
+    {
+        construct(xs, ys);
+    }
+
+    ~CubicSpline() = default;
+
+//--------------------------------------------------------------
+// 公共接口
+//--------------------------------------------------------------
+public:
+    void reconstruct(const std::vector<double>& xs,
+                     const std::vector<double>& ys)
+    {
+        construct(xs, ys);
+    }
+
+    // 计算样条
+    double calculate(double x) const
+    {
+        int n = static_cast<int>(X.size());
+        if (n < 2) throw std::invalid_argument("CubicSpline: no data!");
+
+        // 二分查找所在区间
+        int i = findInterval(x);
+        double h = X[i+1] - X[i];
+
+        double A = (X[i+1] - x) / h;
+        double B = (x - X[i]) / h;
+
+        // 样条表达式：
+        // S(x)= A*y_i + B*y_{i+1} + ((A^3-A)*h^2/6)*M_i + ((B^3-B)*h^2/6)*M_{i+1}
+        double term1 = A * Y[i] + B * Y[i+1];
+        double term2 = ((A*A*A - A) * h * h / 6.0) * M[i];
+        double term3 = ((B*B*B - B) * h * h / 6.0) * M[i+1];
+
+        return term1 + term2 + term3;
+    }
+
+    const std::vector<double>& getXs() const { return X; }
+    const std::vector<double>& getYs() const { return Y; }
+    const std::vector<double>& getM()  const { return M; }
+
+//--------------------------------------------------------------
+// 内部构造
+//--------------------------------------------------------------
+private:
+    void construct(const std::vector<double>& xs,
+                   const std::vector<double>& ys)
+    {
+        int n = xs.size();
+        if (n < 2 || ys.size() != xs.size())
+            throw std::invalid_argument("CubicSpline: xs,ys size mismatch or too small!");
+
+        // 节点不得重复
+        for (int i = 1; i < n; ++i) {
+            if (std::abs(xs[i] - xs[i-1]) < 1e-12)
+                throw std::invalid_argument("CubicSpline: duplicated x values");
+        }
+
+        X = xs;
+        Y = ys;
+        M.assign(n, 0.0);
+
+        if (n == 2) {
+            // 只有两个点时，M_i=0 等价于线性插值
+            return;
+        }
+
+        //======================================================
+        // Step 1: 构造三对角方程 A*M = d
+        //======================================================
+        std::vector<double> h(n-1);
+        for (int i = 0; i < n-1; ++i)
+            h[i] = X[i+1] - X[i];
+
+        Matrix A(n, n);
+        std::vector<double> d(n, 0.0);
+
+        // 自然样条边界
+        A.set(0,0,1.0);
+        A.set(n-1,n-1,1.0);
+
+        // 中间行
+        for (int i = 1; i < n-1; ++i) {
+            A.set(i, i-1, h[i-1] / 6.0);
+            A.set(i, i, (h[i-1] + h[i]) / 3.0);
+            A.set(i, i+1, h[i] / 6.0);
+
+            d[i] = (Y[i+1] - Y[i]) / h[i]
+                 - (Y[i] - Y[i-1]) / h[i-1];
+        }
+
+        //======================================================
+        // Step 2：求解三对角方程
+        //======================================================
+        Matrix D(n, 1);
+        for (int i = 0; i < n; ++i)
+            D.set(i,0, d[i]);
+
+        // solve(A * M = D)
+        //auto sol = A.solve(D);
+        auto sol = MatCal::Algorithm::Matrix::solve_columnElimination(A,D);
+
+        for (int i = 0; i < n; ++i)
+            M[i] = sol->get(i,0);
+    }
+
+//--------------------------------------------------------------
+// 区间查找（二分）
+//--------------------------------------------------------------
+    int findInterval(double x) const
+    {
+        int n = X.size();
+        if (x <= X[0]) return 0;
+        if (x >= X[n-1]) return n-2;
+
+        int L = 0, R = n-1;
+        while (L <= R) {
+            int mid = (L + R) / 2;
+            if (X[mid] <= x && x <= X[mid+1])
+                return mid;
+
+            if (X[mid] < x) L = mid + 1;
+            else R = mid - 1;
+        }
+        return n-2;
+    }
+
+//--------------------------------------------------------------
+// 内部数据
+//--------------------------------------------------------------
+private:
+    std::vector<double> X;   // 节点 x_i
+    std::vector<double> Y;   // 节点 y_i
+    std::vector<double> M;   // 二阶导数 M_i
+};
+
+
+//------------------------------------------------------------
+// Linear 插值（分段线性插值）
+//------------------------------------------------------------
+class LinearInsert {
+public:
+    // 构造与析构
+    LinearInsert() = default;
+
+    LinearInsert(const std::vector<std::pair<double,double>>& data) {
+        construct_from_pairs(data);
+    }
+
+    LinearInsert(const std::initializer_list<std::pair<double,double>>& data) {
+        std::vector<std::pair<double,double>> v = data;
+        construct_from_pairs(v);
+    }
+
+    LinearInsert(const std::vector<double>& xs,
+                 const std::vector<double>& ys)
+    {
+        construct(xs, ys);
+    }
+
+    ~LinearInsert() = default;
+
+public:
+    //--------------------------------------------------------
+    // 重新构造（与其它插值类保持一致）
+    //--------------------------------------------------------
+    void reconstruct(const std::vector<double>& xs,
+                     const std::vector<double>& ys)
+    {
+        construct(xs, ys);
+    }
+
+    void reconstruct(const std::vector<std::pair<double,double>>& data)
+    {
+        construct_from_pairs(data);
+    }
+
+    //--------------------------------------------------------
+    // 插值计算
+    //--------------------------------------------------------
+    double calculate(double x) const {
+        int n = static_cast<int>(X.size());
+        if (n == 0)
+            throw std::runtime_error("LinearInsert: no data");
+        if (n == 1)
+            return Y[0];
+
+        // 边界外：线性外推（与数学定义一致）
+        if (x <= X.front())
+            return interpolate(0, 1, x);
+        if (x >= X.back())
+            return interpolate(n-2, n-1, x);
+
+        // 二分查找所在区间
+        int i = findInterval(x);
+        return interpolate(i, i+1, x);
+    }
+
+    //--------------------------------------------------------
+    // Getter
+    //--------------------------------------------------------
+    const std::vector<double>& getXs() const { return X; }
+    const std::vector<double>& getYs() const { return Y; }
+
+private:
+    //--------------------------------------------------------
+    // 使用 pair 形式构造
+    //--------------------------------------------------------
+    void construct_from_pairs(const std::vector<std::pair<double,double>>& data)
+    {
+        int n = data.size();
+        if (n < 2)
+            throw std::invalid_argument("LinearInsert: at least 2 points required.");
+
+        X.resize(n);
+        Y.resize(n);
+
+        for (int i = 0; i < n; ++i) {
+            X[i] = data[i].first;
+            Y[i] = data[i].second;
+        }
+
+        check_and_sort();
+    }
+
+    //--------------------------------------------------------
+    // 标准构造
+    //--------------------------------------------------------
+    void construct(const std::vector<double>& xs,
+                   const std::vector<double>& ys)
+    {
+        if (xs.size() < 2 || xs.size() != ys.size())
+            throw std::invalid_argument("LinearInsert: xs,ys size mismatch or too small");
+
+        X = xs;
+        Y = ys;
+
+        check_and_sort();
+    }
+
+    //--------------------------------------------------------
+    // 校验并保证 X 单调递增（你其它插值函数也做类似检查）
+    //--------------------------------------------------------
+    void check_and_sort() {
+        int n = X.size();
+        for (int i = 1; i < n; ++i) {
+            if (X[i] <= X[i-1]) {
+                throw std::invalid_argument(
+                    "LinearInsert: x values must be strictly increasing.");
+            }
+        }
+    }
+
+    //--------------------------------------------------------
+    // 二分查找区间 i，使 x ∈ [X[i], X[i+1]]
+    //--------------------------------------------------------
+    int findInterval(double x) const {
+        int L = 0, R = static_cast<int>(X.size()) - 2;
+        while (L <= R) {
+            int mid = (L + R) / 2;
+            if (X[mid] <= x && x <= X[mid+1])
+                return mid;
+            if (X[mid] < x)
+                L = mid + 1;
+            else
+                R = mid - 1;
+        }
+        // 理论上不会走到这里
+        return std::max(0, L);
+    }
+
+    //--------------------------------------------------------
+    // 两点间线性插值
+    //--------------------------------------------------------
+    double interpolate(int i, int j, double x) const {
+        double x0 = X[i], x1 = X[j];
+        double y0 = Y[i], y1 = Y[j];
+        double t = (x - x0) / (x1 - x0);
+        return y0 + t * (y1 - y0);
+    }
+
+private:
+    std::vector<double> X;
+    std::vector<double> Y;
+};
+
+
+
 }//namespace MatCal::Algorithm::Insert
 #endif//INSERT_HPP
