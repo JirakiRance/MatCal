@@ -371,6 +371,14 @@ public:
         double fa = f.calculate(a);
         return fb-fa;
     }
+
+    //求内积,默认权系数为1
+    double product(QinJiuShao&other, double a, double b){
+        QinJiuShao tmp = *this * other;
+        return tmp.definiteIntegral(a,b);
+    }
+
+
 //内部维护方法
 private:
     //内部维护，在构造时使用。强制清理所有无效结点并强制排序

@@ -18,13 +18,69 @@ namespace MatCal{
 
 #include<functional>
 #include<vector>
+#include<cmath>
 #include"Matrix.hpp"
 #include"QinJiuShao.hpp"
+#include"Insert.hpp"
 
 namespace MatCal::Algorithm::Basics{
     using QinJiuShao = MatCal::Utils::QinJiuShao;
 
-//c++没有静态类，这个类也就写一点静态方法
+//圆周率pi
+const static double PI =  3.14159265358979323846;
+//自然底数e
+const static double E = 2.71828182845904523536;
+
+//求解线性系统Ax=b。使用方法：Gauss-Sedel,ColmunElimination,LU
+static std::pair<MatCal::Utils::Matrix,std::string> solve_Linear_System(
+    MatCal::Utils::Matrix& A,
+    MatCal::Utils::Matrix& b){
+    std::string msg="";
+
+    try{    //Gauss_Seidel
+        msg+="method:Gauss_Seidel:";
+        auto ret1 = MatCal::Algorithm::Matrix::Gauss_Seidel(A,b);
+        if(ret1.converged){
+            msg+="success!";
+            return std::make_pair(ret1.root,msg);
+        }else{
+            msg+="not converged!\n";
+        }
+    }catch(std::exception& e){
+        msg+="failed---->";
+        msg+=e.what();
+        msg+="\n";
+    }
+    
+    try{    //ColmunElimination
+        msg+="method:ColmunElimination:";
+        auto ret2 = MatCal::Algorithm::Matrix::solve_columnElimination(A,b);
+        MatCal::Utils::Matrix* copy_child_2 = dynamic_cast<MatCal::Utils::Matrix*>(ret2.get());
+        msg+="success!";
+        return std::make_pair(*copy_child_2,msg);
+    }catch(std::exception& e){
+        msg+="failed!---->";
+        msg+=e.what();
+        msg+="\n";
+    }
+    
+    try{    //LU Decompose
+        msg+="method:LU Decompose:";
+        auto ret3 = MatCal::Algorithm::Matrix::LU_Decompose(A).solve(b);
+        MatCal::Utils::Matrix* copy_child_3 = dynamic_cast<MatCal::Utils::Matrix*>(ret3.get());
+        msg+="success!";
+        return std::make_pair(*copy_child_3,msg);
+    }catch(std::exception& e){
+        msg+="failed---->";
+        msg+=e.what();
+        msg+="\n";
+    }
+    msg+="all methods failed!";
+    return std::make_pair(MatCal::Utils::Matrix(),msg);
+}
+
+
+//指定函数求导
 class Derivative{
 public:
     using Func_y = std::function<double(double)>;
@@ -272,8 +328,353 @@ public:
 
 };
 
+
+//正交多项式
+class OrthogonalPolynomials{
+public:
+    //Chebyshev
+    static QinJiuShao Chebyshev(int n, bool second = false){
+        if(n<0)
+            throw std::invalid_argument("Orthogonal poly n should at least >= 0");
+        int u1 = 1;
+        if(second) u1=2;
+        //dp数组
+        QinJiuShao dp[2] = {
+            QinJiuShao({{0,1}}),
+            QinJiuShao({{1,u1}}),
+        };
+        if(n<2) return dp[n];
+        QinJiuShao _2x({{1,2}});
+        QinJiuShao ret = _2x;
+        int target = 2;
+        while(target<=n){
+            ret = _2x * dp[1]- dp[0];
+            dp[0] = dp[1];
+            dp[1] = ret;
+            ++target;
+        }
+        return ret;
+    }
+
+    //第一类Chebyshev多项式的零点  [-1,1]  之间
+    static std::vector<double> ChebyshevZeros(int n){
+        if (n <= 0)
+            throw std::invalid_argument("to calc ChebyshevZeros, n should > 0 (now is " + std::to_string(n) + ")");
+        std::vector<double> ret(n,0);
+        for(int i=1;i<=n;++i){
+            ret[i-1]=std::cos(
+                PI * (2 * i -1) / (2 * n)
+            );
+        }
+        return ret;
+    }
+
+    //Legendre
+    static QinJiuShao Legendre(int n){
+        if(n<0)
+            throw std::invalid_argument("Orthogonal poly n should at least >= 0");
+        //dp数组
+        QinJiuShao dp[2] = {
+            QinJiuShao({{0,1}}),
+            QinJiuShao({{1,1}}),
+        };
+        if(n<2) return dp[n];
+        QinJiuShao _x({{1,1}});
+        QinJiuShao ret = _x;
+        int target = 2;
+        while(target<=n){
+            ret = _x * ((2*target-1)/(target)) *dp[1]- ((target-1)/(target)) * dp[0];
+            dp[0] = dp[1];
+            dp[1] = ret;
+            ++target;
+        }
+        return ret;
+    }
+};//class OrthogonalPolynomials
+
+
+//数值积分
+class NumericalIntegration{
+public:
+    //指定函数，按定义积分
+    static double Instant(std::function<double(double)> _func,double a,double b,double eps=1e-6){
+        if(a>b){
+            throw std::invalid_argument("a should <= b !");
+        }
+        if(_func = nullptr){
+            throw std::invalid_argument("_func cannot be nullptr!");
+        }
+        if(eps<=0 || eps > (b-a)){
+            throw std::invalid_argument("eps not available!");
+        }
+        double curr = a;
+        double ret = 0;
+        while(curr<b){
+            ret += _func(curr) * eps;
+            curr+=eps;
+        }
+        return ret;
+    }
+
+    //NewtonCotes
+    static double NewtonCotes(std::function<double(double)> func, double a, double b, int n = 4) {
+        if(a > b){
+            throw std::invalid_argument("a should <= b !");
+        }
+        if(!func){
+            throw std::invalid_argument("func cannot be nullptr!");
+        }
+        if(n < 1 || n > 7){
+            throw std::invalid_argument("n must be between 1 and 7");
+        }
+        const std::vector<double>& coeffs = CotesSheet[n - 1];
+        double h = (b - a) / n;
+        double sum = 0.0;
+        for (int i = 0; i <= n; ++i) {
+            double x = a + i * h;
+            sum += coeffs[i] * func(x);
+        }
+        return sum * (b - a);
+    }
+
+    //CompositeNewtonCotes
+    static double CompositeNewtonCotes(std::function<double(double)> func, double a, double b, int segments = 10, int n = 4) {
+        if(a > b){
+            throw std::invalid_argument("a should <= b !");
+        }
+        if(!func){
+            throw std::invalid_argument("func cannot be nullptr!");
+        }
+        if(segments <= 0){
+            throw std::invalid_argument("segments must be > 0");
+        }
+        if(n < 1 || n > 7){
+            throw std::invalid_argument("n must be between 1 and 7");
+        }
+        
+        const std::vector<double>& coeffs = CotesSheet[n - 1];
+        double segment_width = (b - a) / segments;
+        double total = 0.0;
+        double h = segment_width / n;
+        for(int seg = 0; seg < segments; ++seg){
+            double seg_a = a + seg * segment_width;
+            double seg_b = seg_a + segment_width;
+
+            double sum = 0.0;
+            for(int i = 0; i <= n; ++i){
+                double x = seg_a + i * h;
+                sum += coeffs[i] * func(x);
+            }
+            total += sum;
+        }
+        return total * segment_width;
+    }
+
+    //Romberg
+    static std::pair<double,MatCal::Utils::Matrix> Romberg(std::function<double(double)> func,double a,double b,double eps=1e-6,int maxIterations =20){
+        if(a > b){
+            throw std::invalid_argument("a should <= b !");
+        }
+        if(!func){
+            throw std::invalid_argument("func cannot be nullptr!");
+        }
+        if(maxIterations<0){
+            throw std::invalid_argument("maxIterations should >= 0 !");
+        }
+        
+        MatCal::Utils::Matrix sheet(5,4);
+        int expand = 2;
+        double ba = b-a;
+        std::vector<bool> calc_available = {
+            true,false,false,false
+        };
+        sheet.set(0,0,(
+            ba / 2  * (func(a) + func(b))
+        ));
+        double last = INT_MAX;
+        int iter = 1;
+        while(last  > eps && iter <=maxIterations){
+            if(iter >= sheet.getRows()){
+                sheet.resize(sheet.getRows()*expand,sheet.getCols());
+            }
+            //T
+            double t_new = 0;
+            double n = std::pow(2,iter-1);
+            for(int i=1;i<=n;++i){
+                t_new+=func(
+                    a + ( 2*i-1 ) * ba / (2*n)
+                );
+            }
+            t_new*=(
+                ba/(2*n)
+            );
+            t_new+=sheet.get(iter-1,0)/2;
+            sheet.set(iter,0,t_new);
+
+            last = std::min(last,std::abs(sheet.get(iter,0)-sheet.get(iter-1,0)));
+            if(last < eps)
+                return std::make_pair(t_new,sheet);
+
+            //SCR
+            for(int i=1;i<4;++i){
+                if(i==iter) calc_available[i]=true;
+                if(calc_available[i]){
+                    double ret = std::pow(4,i) * sheet.get(iter,i-1) - sheet.get(iter-1,i-1);
+                    ret/=(std::pow(4,i)-1);
+                    sheet.set(iter,i,ret);
+                    //last计算，先横向再竖向
+                    last = std::min(last,std::abs(sheet.get(iter,i)-sheet.get(iter,i-1)));
+                    if(last < eps)
+                        return std::make_pair(ret,sheet);
+                    if(iter>i){
+                        last = std::min(last,std::abs(sheet.get(iter,i)-sheet.get(iter-1,i)));
+                        if(last < eps)
+                            return std::make_pair(ret,sheet);
+                    }
+                }
+            }//for SCR
+            ++iter;
+        }//while
+        return std::make_pair(last,sheet);
+    }//Romberg
+
+    //离散数据表
+    static double NewtonCotes(std::vector<std::pair<double, double>>& data, double a, double b, int n = 4) {
+        MatCal::Algorithm::Insert::LagrangeInsert lagrange(data);
+        auto interp_func = lagrange.getPoly().toFunction();
+        return NewtonCotes(interp_func, a, b, n);
+    }
+    static double CompositeNewtonCotes(std::vector<std::pair<double, double>>& data, double a, double b, int segments = 10, int n = 4) {
+        MatCal::Algorithm::Insert::LagrangeInsert lagrange(data);
+        auto interp_func = lagrange.getPoly().toFunction();
+        return CompositeNewtonCotes(interp_func, a, b, segments, n);
+    }
+    static std::pair<double,MatCal::Utils::Matrix> Romberg(std::vector<std::pair<double, double>>& data,double a,double b,double eps=1e-6,int maxIterations =20){
+        MatCal::Algorithm::Insert::LagrangeInsert lagrange(data);
+        auto interp_func = lagrange.getPoly().toFunction();
+        return Romberg(interp_func, a, b, eps , maxIterations);
+    }
+
+public:
+    const static std::vector<std::vector<double>> CotesSheet;
+};
+const std::vector<std::vector<double>> NumericalIntegration::CotesSheet = {
+    {1.0/2,     1.0/2},
+    {1.0/6,     4.0/6,      1.0/6},
+    {1.0/8,     3.0/8,      3.0/8,      1.0/8},
+    {7.0/90,    16.0/45,    2.0/15,     16.0/45,      7.0/90},
+    {19.0/288,  25.0/96,    25.0/144,   25.0/144,     25.0/96,    19.0/288},
+    {41.0/840,  9.0/35,     9.0/280,    34.0/105,     9.0/280,    9.0/35,     41.0/840},
+    {751.0/17280,3577.0/17280,1323.0/17280,2989.0/17280,2989.0/17280,1323.0/17280,3577.0/17280,751.0/17280}
+};
+
+//常微分方程求解(ODE)
+class ODE{
+public:
+    //SimpleEuler
+    static MatCal::Utils::Matrix SimpleEuler(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
+        if(n < 1)
+            throw std::invalid_argument("n should be >= 1 !");
+        if(funcs.size()!=n)
+            throw std::invalid_argument("func.size not match n!   func.size:" + std::to_string(funcs.size())+ "  n:" + std::to_string(n) );
+        if(inits.size()!=n+1)
+            throw std::invalid_argument("inits.size not match n+1!   inits.size:" + std::to_string(inits.size())+ "  n+1:" + std::to_string(n+1) );
+        if(h <= 0)
+            throw std::invalid_argument("h should be > 0 !");
+        if(count < 1)
+            throw std::invalid_argument("count should be >= 1 !");
+        MatCal::Utils::Matrix result(count+1,n+1);
+        for(int i=0;i<=n;++i)
+            result[0][i] = inits[i];
+        for(int cnt = 1;cnt<=count;++cnt){
+            result[cnt][0] = result[cnt-1][0] + h;
+            for(int k = 1;k<=n;++k){
+                result[cnt][k] = result[cnt-1][k] + h * funcs[k-1](result[cnt-1]);
+            }//for k(1)
+        }//for cnt(1)
+        return result;
+    }//SimpleEuler
+
+    //imporovedEuler,前一个为算出来的值，后面一个是中间的临时值，供手写用(没什么卵用,仅供手写做题用)
+    static std::pair<MatCal::Utils::Matrix,MatCal::Utils::Matrix> Euler(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
+        if(n < 1)
+            throw std::invalid_argument("n should be >= 1 !");
+        if(funcs.size()!=n)
+            throw std::invalid_argument("func.size not match n!   func.size:" + std::to_string(funcs.size())+ "  n:" + std::to_string(n) );
+        if(inits.size()!=n+1)
+            throw std::invalid_argument("inits.size not match n+1!   inits.size:" + std::to_string(inits.size())+ "  n+1:" + std::to_string(n+1) );
+        if(h <= 0)
+            throw std::invalid_argument("h should be > 0 !");
+        if(count < 1)
+            throw std::invalid_argument("count should be >= 1 !");
+        MatCal::Utils::Matrix ret_true(count+1,n+1);
+        MatCal::Utils::Matrix ret_temp(count+1,n+1);
+        for(int i=0;i<=n;++i){
+            ret_temp[0][i] = inits[i];
+            ret_true[0][i] = inits[i];
+        }
+        for(int cnt = 1;cnt<=count;++cnt){
+            ret_temp[cnt][0] = ret_temp[cnt-1][0] + h;
+            ret_true[cnt][0] = ret_true[cnt-1][0] + h;
+            for(int k = 1;k<=n;++k){
+                ret_temp[cnt][k] = ret_true[cnt-1][k] + h * funcs[k-1](ret_true[cnt-1]);
+            }
+            for(int k = 1;k<=n;++k){
+                ret_true[cnt][k] = ret_true[cnt-1][k] + h/2 * ( funcs[k-1](ret_true[cnt-1]) + funcs[k-1](ret_temp[cnt]));
+            }//for k(1)
+        }//for cnt(1)
+        return std::make_pair(ret_true,ret_temp);
+    }//Euler
+
+    //RungeKutta_44,第一个返回值为结果，第二个是中间值K
+    static MatCal::Utils::Matrix RungeKutta_44(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
+        if(n < 1)
+            throw std::invalid_argument("n should be >= 1 !");
+        if(funcs.size()!=n)
+            throw std::invalid_argument("func.size not match n!   func.size:" + std::to_string(funcs.size())+ "  n:" + std::to_string(n) );
+        if(inits.size()!=n+1)
+            throw std::invalid_argument("inits.size not match n+1!   inits.size:" + std::to_string(inits.size())+ "  n+1:" + std::to_string(n+1) );
+        if(h <= 0)
+            throw std::invalid_argument("h should be > 0 !");
+        if(count < 1)
+            throw std::invalid_argument("count should be >= 1 !");
+
+        MatCal::Utils::Matrix result(count+1,n+1);
+        for(int i=0;i<=n;++i)
+            result[0][i] = inits[i];
+        for(int cnt=1; cnt<=count; ++cnt){
+            result[cnt][0] = result[cnt-1][0] + h; 
+            std::vector<double> k1(n), k2(n), k3(n), k4(n);
+            std::vector<double> base = result[cnt-1];
+            //K1
+            for(int i=0; i<n; ++i) k1[i] = funcs[i](base);
+            //K2
+            std::vector<double> tmp = base;
+            tmp[0] += h/2.0;
+            for(int i=0; i<n; ++i) tmp[i+1] += (h/2.0) * k1[i];
+            for(int i=0; i<n; ++i) k2[i] = funcs[i](tmp);
+            //K3
+            tmp = base;
+            tmp[0] += h/2.0;
+            for(int i=0; i<n; ++i) tmp[i+1] += (h/2.0) * k2[i];
+            for(int i=0; i<n; ++i) k3[i] = funcs[i](tmp);
+            //K4
+            tmp = base;
+            tmp[0] += h;
+            for(int i=0; i<n; ++i) tmp[i+1] += h * k3[i];
+            for(int i=0; i<n; ++i) k4[i] = funcs[i](tmp);
+            //Y
+            for(int i=0; i<n; ++i) {
+                result[cnt][i+1] = base[i+1] + (h/6.0) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
+            }
+        }
+        return result;
+    }//RungeKutta_44
+
+};//class ODE
+
 // ======================================================
-// 3. 数值积分（RK4）
+// 数值积分（RK4）//PT项目专用方法以及命名空间，勿动!
 // ======================================================
 namespace Integrate {
 

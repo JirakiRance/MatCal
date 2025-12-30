@@ -61,7 +61,7 @@ protected:
     int cols;   //列数
 public:
     //抽象的父类构造，矩阵构造需要行数和列数
-    AbstractMatrix(int row,int col):rows(row),cols(col){}
+    AbstractMatrix(int row=0,int col=0):rows(row),cols(col){}
     //虚析构
     virtual ~AbstractMatrix()=0;
 public:
@@ -169,6 +169,25 @@ public:     //构造函数和析构
             }
             ++i;
         }
+    }
+
+    //从父级指针构造
+    Matrix(AbstractMatrix& A){
+        std::unique_ptr<AbstractMatrix> temp = A.toNormalMatrix();
+        Matrix* copy_child = dynamic_cast<Matrix*>(temp.get());
+        if(!copy_child)
+            throw std::bad_cast();
+        this->data = copy_child->data;
+    }
+    Matrix& operator=(AbstractMatrix& A){
+        if(this == &A) return *this;
+        std::unique_ptr<AbstractMatrix> temp = A.toNormalMatrix();
+        Matrix* copy_child = dynamic_cast<Matrix*>(temp.get());
+        if(!copy_child)
+            throw std::bad_cast();
+        this->data.clear();
+        this->data = copy_child->data;
+        return *this;
     }
 
     //赋值运算符
@@ -1905,6 +1924,94 @@ namespace MatCal::Algorithm::Matrix{
     
     }
 
+
+//***************求解特征值***************** */
+
+    //幂法结果类
+    struct PowerMethod_Result{
+        double eigenvalue;
+        Matrix eigenvector;
+        int iterations;
+        PowerMethod_Result(double val,Matrix& vec,int iter = 0):eigenvalue(val),eigenvector(vec),iterations(iter){};
+    };
+    //规范化幂法
+    PowerMethod_Result PowerMethod(AbstractMatrix&A,double eps = 1e-6,int max_iter = 1000){
+        if(!A.isSquare())
+            throw std::invalid_argument("using power method,matrix should be square!");
+        if(A.getCols()==0)
+            throw std::invalid_argument("matrix empty!");
+        int n = A.getCols();
+        //std::function<double(AbstractMatrix& vec)>
+        auto _powerMethod_find_mk = [n](AbstractMatrix& vec){
+            double mk = vec.get(0,0);
+            for(int i=0;i<n;++i){
+                if(std::abs(vec.get(i,0)) > std::abs(mk)){
+                    mk = vec.get(i,0);
+                }
+            }
+            return mk;
+        };
+
+        Matrix raw_vec(n,1);
+        for(int i=0;i<n;++i)
+            raw_vec.set(i,0,1);
+        
+        Matrix u = raw_vec;
+        Matrix v = raw_vec;
+        double m = 0;
+        double last_m = 1;
+        int iter = 0;
+        //主循环
+        while(std::abs(m - last_m)>eps && iter < max_iter){
+            last_m = m;
+            v = *A.multiply(u);
+            m = _powerMethod_find_mk(v);
+            u = *v.scalarMultiply(1/m);
+            ++iter;
+        }
+        return PowerMethod_Result(m,u,iter);
+    }
+    //规范化反幂法
+    PowerMethod_Result PowerMethod_reverse(AbstractMatrix&A,double near_num = 0,double eps = 1e-6,int max_iter = 1000){
+        if(!A.isSquare())
+            throw std::invalid_argument("using power method,matrix should be square!");
+        if(A.getCols()==0)
+            throw std::invalid_argument("matrix empty!");
+        int n = A.getCols();
+        auto _powerMethod_find_mk = [n](AbstractMatrix& vec){
+            double mk = vec.get(0,0);
+            for(int i=0;i<n;++i){
+                if(std::abs(vec.get(i,0)) > std::abs(mk)){
+                    mk = vec.get(i,0);
+                }
+            }
+            return mk;
+        };
+        
+        Matrix raw_vec(n,1);
+        for(int i=0;i<n;++i)
+            raw_vec.set(i,0,1);
+        
+        Matrix I = Matrix::identity(A.getCols());
+        Matrix B(n,n);
+        B = *(A.add( *I.scalarMultiply(-near_num)));
+        auto lu = LU_Decompose(B);
+
+        Matrix u = raw_vec;
+        Matrix v = raw_vec;
+        double m = 0;
+        double last_m = 1;
+        int iter = 0;
+        //主循环
+        while(std::abs(m - last_m)>eps && iter < max_iter){
+            last_m = m;
+            v = *lu.solve(u);
+            m = _powerMethod_find_mk(v);
+            u = *v.scalarMultiply(1/m);
+            ++iter;
+        }
+        return PowerMethod_Result(near_num+1/m,u,iter);
+    }
 
 }//namespace MatCal::Algorithm::Matrix
 
