@@ -244,7 +244,7 @@ public:     //抽象方法实现
         std::cout << "\nMatrix:"<<rows <<"x"<<cols<<":\n";
         for(int i = 0; i < rows; ++i){
             for(int j = 0; j < cols; ++j)
-                std::cout<<std::setw(10)<<std::setprecision(6)<<data[i][j] << " ";
+                std::cout<<std::setw(10)<<std::setprecision(6)<<data[i][j] << "\t";
             std::cout<<"\n";
         }
     }

@@ -626,7 +626,7 @@ public:
         return std::make_pair(ret_true,ret_temp);
     }//Euler
 
-    //RungeKutta_44,第一个返回值为结果，第二个是中间值K
+    //RungeKutta_44,返回结果的每一代的矩阵表示，一行为一代
     static MatCal::Utils::Matrix RungeKutta_44(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
         if(n < 1)
             throw std::invalid_argument("n should be >= 1 !");
