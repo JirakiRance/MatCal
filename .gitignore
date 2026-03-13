@@ -1,2 +1,6 @@
 test/
 .vscode/
+*.exe
+src/output/
+test/output/
+src/usr.cpp
