@@ -20,6 +20,8 @@
 #include<sstream>
 #include<cstring>
 #include<tuple>
+#include<cmath>
+#include<typeinfo>
 
 namespace MatCal{
     namespace Utils{
@@ -99,7 +101,7 @@ public:
     //判断是否是方阵
     virtual bool isSquare()const{return rows==cols;}
 };//class AbstractMatrix
-AbstractMatrix::~AbstractMatrix() = default;//纯许析构实现
+inline AbstractMatrix::~AbstractMatrix() = default;//纯许析构实现
 
 //普通矩阵
 class Matrix:public AbstractMatrix{
@@ -828,7 +830,7 @@ public:     //三角矩阵实例对象特有的方法
 
 
 };//class AbstractTriangularMatrix
-AbstractTriangularMatrix::~AbstractTriangularMatrix()=default;//纯许析构实现
+inline AbstractTriangularMatrix::~AbstractTriangularMatrix()=default;//纯许析构实现
 
 //特殊矩阵:上三角矩阵
 class UpperTriangularMatrix : public AbstractTriangularMatrix {
@@ -1271,7 +1273,7 @@ private:
 
 namespace MatCal::Utils {
 // UpperTriangularMatrix::transpose() 的实现
-std::unique_ptr<LowerTriangularMatrix> UpperTriangularMatrix::transpose() const {
+inline std::unique_ptr<LowerTriangularMatrix> UpperTriangularMatrix::transpose() const {
     auto result = std::make_unique<LowerTriangularMatrix>(rows);
     for (int i = 0; i < rows; ++i)
         for (int j = i; j < cols; ++j)
@@ -1280,7 +1282,7 @@ std::unique_ptr<LowerTriangularMatrix> UpperTriangularMatrix::transpose() const 
 }
 
 // LowerTriangularMatrix::transpose() 的实现
-std::unique_ptr<UpperTriangularMatrix> LowerTriangularMatrix::transpose() const {
+inline std::unique_ptr<UpperTriangularMatrix> LowerTriangularMatrix::transpose() const {
     auto result = std::make_unique<UpperTriangularMatrix>(rows);
     for (int i = 0; i < rows; ++i)
         for (int j = 0; j <= i; ++j)
@@ -1307,7 +1309,7 @@ namespace MatCal::Algorithm::Matrix{
     }
     
     //行初等变换1: 行交换 R_r1 <-> R_r2
-    void swapRows(AbstractMatrix& A, int r1, int r2) {
+    inline void swapRows(AbstractMatrix& A, int r1, int r2) {
         checkRowBounds(A.getRows(), r1);
         checkRowBounds(A.getRows(), r2);
         if (r1 == r2) return;
@@ -1327,7 +1329,7 @@ namespace MatCal::Algorithm::Matrix{
 
 
     //行初等变换2: 行乘法 R_r <- scalar * R_r
-    void scaleRow(AbstractMatrix& A, int r, double scalar) {
+    inline void scaleRow(AbstractMatrix& A, int r, double scalar) {
         if (scalar == 1.0) return;
         checkRowBounds(A.getRows(), r);
 
@@ -1350,7 +1352,7 @@ namespace MatCal::Algorithm::Matrix{
 
 
     //行初等变换3: 行加法 R_r_target <- R_r_target + scalar * R_r_source
-    void addScaledRow(AbstractMatrix& A, int r_target, int r_source, double scalar) {
+    inline void addScaledRow(AbstractMatrix& A, int r_target, int r_source, double scalar) {
         if (scalar == 0.0 || r_target == r_source) return;
         checkRowBounds(A.getRows(), r_target);
         checkRowBounds(A.getRows(), r_source);
@@ -1374,7 +1376,7 @@ namespace MatCal::Algorithm::Matrix{
 
 
     //列初等变换1: 列交换 C_c1 <-> C_c2
-    void swapCols(AbstractMatrix& A, int c1, int c2) {
+    inline void swapCols(AbstractMatrix& A, int c1, int c2) {
         if (c1 == c2) return;
         checkColBounds(A.getCols(), c1);
         checkColBounds(A.getCols(), c2);
@@ -1398,7 +1400,7 @@ namespace MatCal::Algorithm::Matrix{
 
 
     //列初等变换2: 列乘法 C_c <- scalar * C_c
-    void scaleCol(AbstractMatrix& A, int c, double scalar) {
+    inline void scaleCol(AbstractMatrix& A, int c, double scalar) {
         if (scalar == 1.0) return;
         checkColBounds(A.getCols(), c);
 
@@ -1421,7 +1423,7 @@ namespace MatCal::Algorithm::Matrix{
 
 
     //列初等变换3: 列加法 C_c_target <- C_c_target + scalar * C_c_source
-    void addScaledCol(AbstractMatrix& A, int c_target, int c_source, double scalar) {
+    inline void addScaledCol(AbstractMatrix& A, int c_target, int c_source, double scalar) {
         if (scalar == 0.0 || c_target == c_source) return;
         checkColBounds(A.getCols(), c_target);
         checkColBounds(A.getCols(), c_source);
@@ -1445,7 +1447,7 @@ namespace MatCal::Algorithm::Matrix{
 
     //按照记录的行交换操作对矩阵 M 进行多次行变换
     // 参数 reverse=true 表示按相反顺序执行，用于“还原”矩阵
-    void applyRowSwaps(AbstractMatrix& M, const std::vector<std::pair<int,int>>& swaps, bool reverse = false) {
+    inline void applyRowSwaps(AbstractMatrix& M, const std::vector<std::pair<int,int>>& swaps, bool reverse = false) {
         int rows = M.getRows();
 
         if (swaps.empty()) return;
@@ -1473,7 +1475,7 @@ namespace MatCal::Algorithm::Matrix{
 
 //求解矩阵范数
     //一范数（列范数）
-    double norm_one(AbstractMatrix&matrix){
+    inline double norm_one(AbstractMatrix&matrix){
         //需要先转化成普通矩阵
         if(typeid(matrix)!=typeid(Matrix)){
             auto ret=matrix.toNormalMatrix();
@@ -1502,7 +1504,7 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     //无穷范数（行范数）
-    double norm_infinite(AbstractMatrix&matrix){
+    inline double norm_infinite(AbstractMatrix&matrix){
         //需要先转化成普通矩阵
         if(typeid(matrix)!=typeid(Matrix)){
             auto ret=matrix.toNormalMatrix();
@@ -1531,7 +1533,7 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     // F范数
-    double norm_Frobenius(AbstractMatrix& matrix){
+    inline double norm_Frobenius(AbstractMatrix& matrix){
         double sum = 0.0;
         if(auto dense = dynamic_cast<Matrix*>(&matrix)){
             for(int i=0;i<dense->getRows();++i){
@@ -1563,7 +1565,7 @@ namespace MatCal::Algorithm::Matrix{
 
     //列主元消去法求解Ax=b
     //列主元解一次方程(支持一次多组求解),求解交给上三角矩阵来做，所以不会除以对角元素
-    std::unique_ptr<AbstractMatrix> solve_columnElimination(AbstractMatrix& A,AbstractMatrix& b){
+    inline std::unique_ptr<AbstractMatrix> solve_columnElimination(AbstractMatrix& A,AbstractMatrix& b){
         //一共rows轮次
         int rows=A.getRows();
         int col_a=A.getCols();
@@ -1593,7 +1595,7 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     //列主元解多次方程，返回的是变换后的上三角矩阵和初等变换的记录,不会对A变换（如果要变换，请applyRowSwaps）
-    std::pair<std::unique_ptr<AbstractMatrix>,std::vector<std::pair<int,int>>> columnElimination_Transformation(AbstractMatrix& A) {
+    inline std::pair<std::unique_ptr<AbstractMatrix>,std::vector<std::pair<int,int>>> columnElimination_Transformation(AbstractMatrix& A) {
         int rows = A.getRows();
         int colsA = A.getCols();
         std::vector<std::pair<int,int>> swaps; //记录所有行交换
@@ -1633,7 +1635,7 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     //借助列主元的快速行列式求解
-    double determinant(AbstractMatrix& A){
+    inline double determinant(AbstractMatrix& A){
         if(!A.isSquare())
             throw std::invalid_argument("Matrix should be squre!");
         auto [upper,log]=columnElimination_Transformation(A);
@@ -1657,7 +1659,7 @@ namespace MatCal::Algorithm::Matrix{
         }
     };
     //LU分解,返回LU分解结果类
-    LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12) {
+    inline LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12) {
         int rows = A.getRows();
         int cols = A.getCols();
         
@@ -1718,7 +1720,7 @@ namespace MatCal::Algorithm::Matrix{
         bool converged;     //是否收敛
     };
     //Jacobi法
-    Iteration_Result Jacobi(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
+    inline Iteration_Result Jacobi(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
         //转换为普通矩阵
         auto converted_A = A.toNormalMatrix();
         auto converted_b = b.toNormalMatrix();
@@ -1795,7 +1797,7 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     //Gauss-Seidel(不使用矩阵方法了，因为求矩阵的逆不好求且不稳定，与其求逆不如直接对A求逆)
-    Iteration_Result Gauss_Seidel(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
+    inline Iteration_Result Gauss_Seidel(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
         //转换为普通矩阵
         auto converted_A = A.toNormalMatrix();
         auto converted_b = b.toNormalMatrix();
@@ -1857,7 +1859,7 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     //SOR方法，需要传入omega参数，0<omega<2
-    Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100) {
+    inline Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100) {
         if (omega >= 2 || omega <= 0) {
             throw std::invalid_argument("omega should be in (0,2) !");
         }
@@ -1935,7 +1937,7 @@ namespace MatCal::Algorithm::Matrix{
         PowerMethod_Result(double val,Matrix& vec,int iter = 0):eigenvalue(val),eigenvector(vec),iterations(iter){};
     };
     //规范化幂法
-    PowerMethod_Result PowerMethod(AbstractMatrix&A,double eps = 1e-6,int max_iter = 1000){
+    inline PowerMethod_Result PowerMethod(AbstractMatrix&A,double eps = 1e-6,int max_iter = 1000){
         if(!A.isSquare())
             throw std::invalid_argument("using power method,matrix should be square!");
         if(A.getCols()==0)
@@ -1972,7 +1974,7 @@ namespace MatCal::Algorithm::Matrix{
         return PowerMethod_Result(m,u,iter);
     }
     //规范化反幂法
-    PowerMethod_Result PowerMethod_reverse(AbstractMatrix&A,double near_num = 0,double eps = 1e-6,int max_iter = 1000){
+    inline PowerMethod_Result PowerMethod_reverse(AbstractMatrix&A,double near_num = 0,double eps = 1e-6,int max_iter = 1000){
         if(!A.isSquare())
             throw std::invalid_argument("using power method,matrix should be square!");
         if(A.getCols()==0)

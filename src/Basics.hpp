@@ -19,6 +19,7 @@ namespace MatCal{
 #include<functional>
 #include<vector>
 #include<cmath>
+#include<climits>
 #include"Matrix.hpp"
 #include"QinJiuShao.hpp"
 #include"Insert.hpp"
@@ -558,7 +559,7 @@ public:
 public:
     const static std::vector<std::vector<double>> CotesSheet;
 };
-const std::vector<std::vector<double>> NumericalIntegration::CotesSheet = {
+inline const std::vector<std::vector<double>> NumericalIntegration::CotesSheet = {
     {1.0/2,     1.0/2},
     {1.0/6,     4.0/6,      1.0/6},
     {1.0/8,     3.0/8,      3.0/8,      1.0/8},
