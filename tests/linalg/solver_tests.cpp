@@ -27,6 +27,11 @@ int main() {
     SolverOptions defaults;
     expect_true(defaults.valid(), "default SolverOptions valid");
     expect_near(defaults.comparison_tolerance(10.0), 1.0e-11, 1e-20, "relative default tolerance");
+    SolverOptions mixed_tolerance;
+    mixed_tolerance.absolute_tolerance = 1.0e-8;
+    mixed_tolerance.relative_tolerance = 1.0e-6;
+    expect_near(mixed_tolerance.comparison_tolerance(1.0e-4), 1.0e-8, 1e-20, "absolute tolerance branch");
+    expect_near(mixed_tolerance.comparison_tolerance(10.0), 1.0e-5, 1e-20, "relative tolerance branch");
 
     SolverOptions invalid = defaults;
     invalid.absolute_tolerance = -1.0;

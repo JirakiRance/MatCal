@@ -1,6 +1,6 @@
 # Skyline Storage and SPD LDLT
 
-M2 adds a general numerical skyline storage type and a baseline SPD LDLT solver under `MatCal::Linalg`.
+M2 adds a general numerical skyline storage type and a baseline SPD LDLT solver under `MatCal::Linalg`. M2.1 reviews and optimizes this existing implementation without adding a second skyline or LDLT design.
 
 ## Public API
 
@@ -64,7 +64,7 @@ Factorization work is roughly:
 O(sum(profile_width_i^2))
 ```
 
-Solve is currently a reference implementation. Forward substitution and factor matvec are skyline-profile operations; back substitution scans later rows and is not yet optimized for very large systems.
+Solve uses the skyline profile for forward substitution, diagonal solve, back substitution, and residual matvec. M2.1 stores column adjacency inside the owning factorization so back substitution visits only rows whose profile contains the active column.
 
 ## Metrics and Residual
 
@@ -81,6 +81,8 @@ Metrics include:
 - `relative_residual_norm`
 - `residual_acceptance_tolerance`
 - `operation_count`
+- `factorization_operation_count`
+- `solve_operation_count`
 
 Residual uses the M1.1 contract:
 
@@ -92,8 +94,22 @@ rel_res = abs_res / (matrix_scale * solution_scale + rhs_scale)
 Success requires:
 
 ```text
-abs_res <= absolute_tolerance + relative_tolerance * (matrix_scale * solution_scale + rhs_scale)
+abs_res <= max(absolute_tolerance, relative_tolerance * (matrix_scale * solution_scale + rhs_scale))
 ```
+
+Pivot checks use:
+
+```text
+pivot_factor * max(absolute_tolerance, relative_tolerance * matrix_scale)
+```
+
+For integration callers that want `c * max(matrix_scale, 1)`, set both `absolute_tolerance` and `relative_tolerance` to `c` and `pivot_factor` to `1`. MatCal does not hard-code any SFL-specific value for `c`.
+
+M2.1 performance contract tests record deterministic storage and work counters:
+
+- narrow band, `n = 48`: skyline storage `141`, dense storage `2304`, factorization work `139`, solve work `375`;
+- variable profile, `n = 48`: skyline storage `168`, dense storage `2304`;
+- compact band, `n = 12`: skyline storage `23`, dense storage `144`, factorization work `11`, solve work `57`.
 
 ## Deferred Work
 

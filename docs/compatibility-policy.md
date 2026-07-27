@@ -50,6 +50,16 @@ M1 adds `MatCal::Linalg` as a new 0.x development target while preserving `MatCa
 - New linalg consumers should include headers from `include/MatCal/Linalg` and link `MatCal::Linalg`.
 - `MatCal::Linalg` is not ABI-stable in M1 and should be treated as a 0.x source API.
 
+## M2/M2.1 Linalg Freezing Notes
+
+M2 adds `SymmetricSkylineMatrix`, `SkylineLdltFactorization`, `factorize_skyline_ldlt`, and `solve_skyline_ldlt` under `MatCal::Linalg`. M2.1 keeps those existing API names and implementation path, then optimizes profile access and clarifies solver metrics.
+
+- `MatCal::Legacy` remains unchanged and source-compatible with the M0/M0.1 baseline.
+- `MatCal::Linalg` remains a 0.x source API and is not ABI-stable.
+- M2.1 extends `SolverMetrics` with `factorization_operation_count` and `solve_operation_count`; existing `operation_count` remains available.
+- M2.1 changes the 0.x tolerance composition to `max(absolute_tolerance, relative_tolerance * scale)`. This is a pre-1.0 contract correction for integration readiness.
+- No precompiled MatCal binary is declared as the default integration vehicle. Consumers should build and link the CMake target for the pinned source version.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

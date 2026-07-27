@@ -20,6 +20,7 @@ public:
     double matrix_scale() const noexcept { return matrix_scale_; }
     double pivot_tolerance_used() const noexcept { return pivot_tolerance_used_; }
     double minimum_abs_pivot() const noexcept { return minimum_abs_pivot_; }
+    std::size_t factorization_operation_count() const noexcept { return factorization_operation_count_; }
 
     double diagonal(std::size_t index) const;
     double lower(std::size_t row, std::size_t column) const;
@@ -37,6 +38,7 @@ private:
     std::size_t size_ = 0;
     std::vector<std::size_t> first_columns_;
     std::vector<std::size_t> row_offsets_;
+    std::vector<std::vector<std::size_t>> lower_rows_by_column_;
     std::vector<double> l_values_;
     std::vector<double> diagonal_;
     double matrix_scale_ = 0.0;

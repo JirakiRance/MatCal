@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work.
 
 ## Current Shape
 
@@ -36,7 +36,7 @@ Do not describe `MatCal::Linalg` as ABI-stable or production-ready.
 
 1. Keep M0/M0.1 characterization and regression tests as the compatibility gate.
 2. Maintain M1.1 `Vector`, `DenseMatrix`, `SolverOptions`, `SolverDiagnostic`, `SolverMetrics`, and `SolverResult` as the new baseline.
-3. Maintain M2 `SymmetricSkylineMatrix` and SPD `SkylineLdltFactorization` as general numerical facilities.
+3. Maintain M2/M2.1 `SymmetricSkylineMatrix` and SPD `SkylineLdltFactorization` as general numerical facilities.
 4. Add pivoted LU factors as a new explicit API while preserving legacy no-pivot `LU_Decompose`.
 5. Separate matrix storage from solver algorithms.
 6. Replace stdout from core paths with structured status or caller-provided diagnostics.
@@ -61,6 +61,13 @@ M2 reuses:
 - `not_positive_definite` vs `breakdown` distinction for SPD LDLT.
 - Machine-readable diagnostic `code`, `reason`, `phase`, `row`, and `column`.
 
+M2.1 adds:
+
+- Profile-limited skyline back substitution using factorization-owned column adjacency.
+- Separate factorization and solve work counters in `SolverMetrics`.
+- Performance contract tests based on deterministic storage/work counts, not wall-clock timing.
+- The frozen 0.x tolerance composition `max(absolute_tolerance, relative_tolerance * scale)`.
+
 ## Future Capabilities
 
 The architecture should eventually support:
@@ -82,4 +89,4 @@ These are roadmap items, not M0 implementations.
 - No ABI stability claim.
 - No CSR, Skyline, LDLT, or FEM implementation in M1.
 - No CSR, Skyline, LDLT, or FEM implementation in M1.1.
-- No general indefinite symmetric factorization, Bunch-Kaufman, CSR, iterative method, FEM, or SFL integration in M2.
+- No general indefinite symmetric factorization, Bunch-Kaufman, CSR, iterative method, FEM, or SFL integration in M2/M2.1.

@@ -128,6 +128,10 @@ if(BUILD_TESTING)
         tests/linalg/skyline_ldlt_tests.cpp
     )
 
+    matcal_add_linalg_test(matcal_linalg_skyline_performance_contract_tests
+        tests/linalg/skyline_performance_contract_tests.cpp
+    )
+
     matcal_add_linalg_test(matcal_linalg_public_header_tests
         tests/linalg/public_headers_main.cpp
         tests/linalg/header_vector_self_contained.cpp

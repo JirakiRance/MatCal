@@ -33,14 +33,16 @@ The default absolute tolerance is zero so it does not dominate small-scale but w
 Comparison form:
 
 ```text
-absolute_tolerance + relative_tolerance * scale
+max(absolute_tolerance, relative_tolerance * scale)
 ```
 
 Pivot comparison form:
 
 ```text
-pivot_factor * (absolute_tolerance + relative_tolerance * scale)
+pivot_factor * max(absolute_tolerance, relative_tolerance * scale)
 ```
+
+M2.1 correction: earlier M1.1 text and implementation used a sum of absolute and relative terms. The frozen 0.x contract now uses the maximum of the two terms. This lets callers set both tolerances to `c` to express `c * max(scale, 1)` without MatCal hard-coding a domain-specific rule.
 
 M1.1 correction: for pivot checks the dense reference solver uses:
 
@@ -83,6 +85,8 @@ Current solver examples:
 
 - `iterations`
 - `operation_count`
+- `factorization_operation_count`
+- `solve_operation_count`
 - `residual_norm`
 - `absolute_residual_norm`
 - `relative_residual_norm`
@@ -93,7 +97,7 @@ Current solver examples:
 - `pivot_tolerance_used`
 - `minimum_abs_pivot`
 
-For `solve_dense_partial_pivot`, `iterations` records elimination steps and `residual_norm` is retained as an alias for `absolute_residual_norm`. For skyline LDLT, `iterations` records factorization rows or solve size depending on phase, and `operation_count` is a reference work counter rather than a hardware-level flop count.
+For `solve_dense_partial_pivot`, `iterations` records elimination steps and `residual_norm` is retained as an alias for `absolute_residual_norm`. For skyline LDLT, `iterations` records factorization rows or solve size depending on phase. `operation_count` is a reference work counter rather than a hardware-level flop count; M2.1 also reports factorization and solve portions separately.
 
 Residual contract:
 
@@ -107,7 +111,7 @@ If the denominator is zero, relative residual is `0` when the absolute residual 
 Success requires:
 
 ```text
-absolute_residual_norm <= absolute_tolerance + relative_tolerance * (matrix_scale * solution_scale + rhs_scale)
+absolute_residual_norm <= max(absolute_tolerance, relative_tolerance * (matrix_scale * solution_scale + rhs_scale))
 ```
 
 Otherwise the result is non-success; the dense reference solver uses `not_converged` for finite residuals above tolerance and `breakdown` for non-finite residual evaluation.

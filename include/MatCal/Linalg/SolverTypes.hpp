@@ -1,6 +1,7 @@
 #ifndef MATCAL_LINALG_SOLVER_TYPES_HPP
 #define MATCAL_LINALG_SOLVER_TYPES_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -57,7 +58,7 @@ struct SolverOptions {
             return std::numeric_limits<double>::max();
         }
         double relative_part = saturated_product(relative_tolerance, scale);
-        return saturated_sum(absolute_tolerance, relative_part);
+        return std::max(absolute_tolerance, relative_part);
     }
 
     double pivot_tolerance(double scale) const noexcept {
@@ -105,6 +106,8 @@ struct SolverDiagnostic {
 struct SolverMetrics {
     std::size_t iterations = 0;
     std::size_t operation_count = 0;
+    std::size_t factorization_operation_count = 0;
+    std::size_t solve_operation_count = 0;
     double residual_norm = 0.0;
     double absolute_residual_norm = 0.0;
     double relative_residual_norm = 0.0;

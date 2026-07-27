@@ -51,5 +51,9 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 - `SymmetricSkylineMatrix` stores a symmetric numerical profile only. It does not perform FEM assembly or constraint handling.
 - `SkylineLdltFactorization` is SPD-only and unpivoted. It rejects singular, semidefinite, and indefinite matrices with `not_positive_definite`.
-- The skyline solve path is a reference implementation. Back substitution currently scans later rows and is not optimized for very large systems.
 - General indefinite symmetric factorization, Bunch-Kaufman pivoting, CSR, and iterative methods remain future work.
+
+## M2.1 Fixed Linalg Contract Issue
+
+- M2 skyline back substitution scanned all later rows and filtered by profile. M2.1 stores column adjacency in the factorization so back substitution visits only profile rows containing the active column.
+- M2.1 changes linalg tolerance composition from `absolute_tolerance + relative_tolerance * scale` to `max(absolute_tolerance, relative_tolerance * scale)`, matching the integration need to express `c * max(scale, 1)`.

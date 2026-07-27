@@ -36,6 +36,29 @@ double vector_scale(const Vector& vector) noexcept {
     return scale;
 }
 
+bool add_operations(SolverMetrics& metrics, std::size_t amount, bool solve_phase) noexcept {
+    if (amount > std::numeric_limits<std::size_t>::max() - metrics.operation_count) {
+        return false;
+    }
+    if (solve_phase) {
+        if (amount > std::numeric_limits<std::size_t>::max() - metrics.solve_operation_count) {
+            return false;
+        }
+    } else {
+        if (amount > std::numeric_limits<std::size_t>::max() - metrics.factorization_operation_count) {
+            return false;
+        }
+    }
+
+    metrics.operation_count += amount;
+    if (solve_phase) {
+        metrics.solve_operation_count += amount;
+    } else {
+        metrics.factorization_operation_count += amount;
+    }
+    return true;
+}
+
 SolverDiagnostic make_diagnostic(SolverStatus status,
                                  std::string code,
                                  std::string reason,
@@ -135,6 +158,24 @@ SolverResult breakdown_solve(std::string reason,
                         value);
 }
 
+SolverResult operation_overflow_solve(std::string phase, SolverMetrics metrics) {
+    return solve_result(SolverStatus::breakdown,
+                        "operation_count_overflow",
+                        "operation_count_overflow",
+                        std::move(phase),
+                        "Skyline LDLT solve operation count overflowed",
+                        metrics);
+}
+
+SkylineLdltFactorizationResult operation_overflow_factor(SolverMetrics metrics) {
+    return factor_result(SolverStatus::breakdown,
+                         "operation_count_overflow",
+                         "operation_count_overflow",
+                         "factorization",
+                         "Skyline LDLT factorization operation count overflowed",
+                         metrics);
+}
+
 } // namespace
 
 double SkylineLdltFactorization::diagonal(std::size_t index) const {
@@ -193,6 +234,7 @@ SolverResult SkylineLdltFactorization::solve(const Vector& b, const SolverOption
     metrics.rhs_scale = vector_scale(b);
     metrics.pivot_tolerance_used = pivot_tolerance_used_;
     metrics.minimum_abs_pivot = minimum_abs_pivot_;
+    metrics.factorization_operation_count = factorization_operation_count_;
     metrics.operation_count = factorization_operation_count_;
     metrics.iterations = size_;
 
@@ -229,7 +271,9 @@ SolverResult SkylineLdltFactorization::solve(const Vector& b, const SolverOption
         double sum = b[i];
         for (std::size_t j = first_columns_[i]; j < i; ++j) {
             sum -= lower(i, j) * y[j];
-            ++metrics.operation_count;
+            if (!add_operations(metrics, 1, true)) {
+                return operation_overflow_solve("forward_substitution", metrics);
+            }
             if (!std::isfinite(sum)) {
                 return breakdown_solve("forward_substitution_not_finite", "forward_substitution", metrics, i, j, sum);
             }
@@ -240,6 +284,9 @@ SolverResult SkylineLdltFactorization::solve(const Vector& b, const SolverOption
     Vector z(size_);
     for (std::size_t i = 0; i < size_; ++i) {
         z[i] = y[i] / diagonal_[i];
+        if (!add_operations(metrics, 1, true)) {
+            return operation_overflow_solve("diagonal_solve", metrics);
+        }
         if (!std::isfinite(z[i])) {
             return breakdown_solve("diagonal_solve_not_finite", "diagonal_solve", metrics, i, i, z[i]);
         }
@@ -248,13 +295,13 @@ SolverResult SkylineLdltFactorization::solve(const Vector& b, const SolverOption
     Vector x(size_);
     for (std::size_t i = size_; i-- > 0;) {
         double sum = z[i];
-        for (std::size_t row = i + 1; row < size_; ++row) {
-            if (stores(row, i)) {
-                sum -= lower(row, i) * x[row];
-                ++metrics.operation_count;
-                if (!std::isfinite(sum)) {
-                    return breakdown_solve("back_substitution_not_finite", "back_substitution", metrics, row, i, sum);
-                }
+        for (std::size_t row : lower_rows_by_column_[i]) {
+            sum -= lower(row, i) * x[row];
+            if (!add_operations(metrics, 1, true)) {
+                return operation_overflow_solve("back_substitution", metrics);
+            }
+            if (!std::isfinite(sum)) {
+                return breakdown_solve("back_substitution_not_finite", "back_substitution", metrics, row, i, sum);
             }
         }
         x[i] = sum;
@@ -266,6 +313,9 @@ SolverResult SkylineLdltFactorization::solve(const Vector& b, const SolverOption
     }
 
     Vector ax = multiply(x);
+    if (!add_operations(metrics, storage_size(), true)) {
+        return operation_overflow_solve("residual", metrics);
+    }
     double absolute_residual = 0.0;
     for (std::size_t i = 0; i < size_; ++i) {
         double residual = ax[i] - b[i];
@@ -357,6 +407,7 @@ SkylineLdltFactorizationResult factorize_skyline_ldlt(const SymmetricSkylineMatr
     factorization.size_ = matrix.size();
     factorization.first_columns_ = matrix.first_columns();
     factorization.row_offsets_ = matrix.row_offsets();
+    factorization.lower_rows_by_column_.assign(matrix.size(), {});
     factorization.l_values_.assign(matrix.storage_size(), 0.0);
     factorization.diagonal_.assign(matrix.size(), 0.0);
     factorization.matrix_scale_ = metrics.matrix_scale;
@@ -365,6 +416,9 @@ SkylineLdltFactorizationResult factorize_skyline_ldlt(const SymmetricSkylineMatr
 
     for (std::size_t i = 0; i < matrix.size(); ++i) {
         factorization.l_values_[factorization.storage_index(i, i)] = 1.0;
+        for (std::size_t column = matrix.first_columns()[i]; column < i; ++column) {
+            factorization.lower_rows_by_column_[column].push_back(i);
+        }
     }
 
     for (std::size_t i = 0; i < matrix.size(); ++i) {
@@ -374,7 +428,9 @@ SkylineLdltFactorizationResult factorize_skyline_ldlt(const SymmetricSkylineMatr
             for (std::size_t k = k_start; k < j; ++k) {
                 double term = factorization.lower(i, k) * factorization.diagonal_[k] * factorization.lower(j, k);
                 sum -= term;
-                ++metrics.operation_count;
+                if (!add_operations(metrics, 1, false)) {
+                    return operation_overflow_factor(metrics);
+                }
                 if (!std::isfinite(sum)) {
                     return factor_result(SolverStatus::breakdown,
                                          "non_finite_intermediate",
@@ -407,7 +463,9 @@ SkylineLdltFactorizationResult factorize_skyline_ldlt(const SymmetricSkylineMatr
         for (std::size_t k = matrix.first_columns()[i]; k < i; ++k) {
             double l = factorization.lower(i, k);
             pivot -= l * l * factorization.diagonal_[k];
-            ++metrics.operation_count;
+            if (!add_operations(metrics, 1, false)) {
+                return operation_overflow_factor(metrics);
+            }
             if (!std::isfinite(pivot)) {
                 return factor_result(SolverStatus::breakdown,
                                      "non_finite_intermediate",
@@ -456,6 +514,7 @@ SkylineLdltFactorizationResult factorize_skyline_ldlt(const SymmetricSkylineMatr
         metrics.minimum_abs_pivot = 0.0;
     }
     factorization.factorization_operation_count_ = metrics.operation_count;
+    metrics.factorization_operation_count = metrics.operation_count;
 
     SkylineLdltFactorizationResult result;
     result.status = SolverStatus::success;

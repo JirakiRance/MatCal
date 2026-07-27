@@ -270,6 +270,7 @@ SolverResult solve_dense_partial_pivot(const DenseMatrix& a,
         }
         result.metrics.iterations = k + 1;
     }
+    result.metrics.factorization_operation_count = result.metrics.operation_count;
 
     for (DenseMatrix::size_type i = n; i-- > 0;) {
         double sum = rhs[i];
@@ -350,6 +351,8 @@ SolverResult solve_dense_partial_pivot(const DenseMatrix& a,
         return breakdown_result("residual_tolerance_not_finite", "residual", result.metrics, SolverDiagnostic::invalid_index(), SolverDiagnostic::invalid_index(), result.metrics.residual_acceptance_tolerance);
     }
     if (result.metrics.absolute_residual_norm > result.metrics.residual_acceptance_tolerance) {
+        result.metrics.solve_operation_count =
+            result.metrics.operation_count - result.metrics.factorization_operation_count;
         return make_result(SolverStatus::not_converged,
                            "residual_too_large",
                            "residual_above_tolerance",
@@ -362,6 +365,8 @@ SolverResult solve_dense_partial_pivot(const DenseMatrix& a,
                            result.metrics.residual_acceptance_tolerance);
     }
 
+    result.metrics.solve_operation_count =
+        result.metrics.operation_count - result.metrics.factorization_operation_count;
     return result;
 }
 

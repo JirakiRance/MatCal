@@ -35,10 +35,10 @@ Future APIs should define:
 
 ## Tolerance Direction
 
-Prefer combined tolerances:
+Prefer scale-aware tolerances:
 
 ```text
-accept when residual <= abs_tol + rel_tol * scale
+accept when residual <= max(abs_tol, rel_tol * scale)
 ```
 
 The scale should be derived from matrix/vector norms and documented per solver.
@@ -48,13 +48,13 @@ The scale should be derived from matrix/vector norms and documented per solver.
 `MatCal::Linalg::SolverOptions` uses:
 
 ```text
-absolute_tolerance + relative_tolerance * scale
+max(absolute_tolerance, relative_tolerance * scale)
 ```
 
 For pivot checks:
 
 ```text
-pivot_factor * (absolute_tolerance + relative_tolerance * scale)
+pivot_factor * max(absolute_tolerance, relative_tolerance * scale)
 ```
 
 Defaults:
@@ -81,6 +81,8 @@ Breakdown is distinct from singular:
 - `singular`: a finite pivot is zero or below the pivot tolerance.
 - `breakdown`: a finite-input computation produces NaN/Inf during factorization, back substitution, solution scaling, or residual evaluation.
 
+M2.1 correction: the M1.1 implementation used `absolute_tolerance + relative_tolerance * scale`. M2.1 changes this to `max(absolute_tolerance, relative_tolerance * scale)` so callers can express `c * max(scale, 1)` by setting both tolerances to `c`.
+
 Residual contract:
 
 ```text
@@ -88,7 +90,7 @@ abs_res = ||Ax-b||_inf
 rel_res = abs_res / (matrix_scale * solution_scale + rhs_scale)
 ```
 
-If the denominator is zero, `rel_res = 0` only when `abs_res = 0`. Success requires `abs_res <= absolute_tolerance + relative_tolerance * denominator`.
+If the denominator is zero, `rel_res = 0` only when `abs_res = 0`. Success requires `abs_res <= max(absolute_tolerance, relative_tolerance * denominator)`.
 
 ## M2 Skyline LDLT Contract
 
@@ -104,10 +106,10 @@ Status distinction:
 The skyline matrix scale is `max(abs(stored_value))`. Pivot tolerance reuses:
 
 ```text
-pivot_factor * (absolute_tolerance + relative_tolerance * matrix_scale)
+pivot_factor * max(absolute_tolerance, relative_tolerance * matrix_scale)
 ```
 
-Residual metrics use the same M1.1 definition. The factorization owns its factors and can solve multiple right-hand sides without modifying the original matrix.
+Residual metrics use the same definition. The factorization owns its factors and can solve multiple right-hand sides without modifying the original matrix. M2.1 records `factorization_operation_count` and `solve_operation_count` separately, with `operation_count` retained as the total/reference counter.
 
 ## Solver Policy Direction
 
