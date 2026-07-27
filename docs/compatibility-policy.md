@@ -39,6 +39,17 @@ Behavior changes are intentional bug fixes. They may affect code that accidental
 
 ABI compatibility is not promised. Because MatCal remains header-only, existing consumers should recompile to pick up M0.1 fixes. M0.1 does not overwrite or replace any historical compiled MatCal binary used by PT or other projects.
 
+## M1 Parallel API Policy
+
+M1 adds `MatCal::Linalg` as a new 0.x development target while preserving `MatCal::Legacy`.
+
+- `MatCal::Legacy` remains available and does not depend on `MatCal::Linalg`.
+- `MatCal::Linalg` does not depend on legacy `AbstractMatrix`, `MatCal::Utils::Matrix`, dynamic casts, or legacy unique-pointer result patterns.
+- No legacy header, namespace, class, or function is removed.
+- Existing PT-style consumers can continue to use the legacy headers.
+- New linalg consumers should include headers from `include/MatCal/Linalg` and link `MatCal::Linalg`.
+- `MatCal::Linalg` is not ABI-stable in M1 and should be treated as a 0.x source API.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

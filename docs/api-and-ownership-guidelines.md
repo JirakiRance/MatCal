@@ -16,21 +16,28 @@ These guidelines apply to new APIs and gradual refactors. Legacy APIs remain ava
 New solvers should return structured results:
 
 ```cpp
-struct SolverStatus {
-    bool converged;
-    int iterations;
-    double residual_norm;
-    std::string message;
+enum class SolverStatus {
+    success,
+    invalid_input,
+    dimension_mismatch,
+    non_finite_input,
+    singular,
+    not_positive_definite,
+    breakdown,
+    not_converged
 };
 
-template <class X>
 struct SolverResult {
-    X value;
     SolverStatus status;
+    Vector solution;
+    SolverMetrics metrics;
+    std::vector<SolverDiagnostic> diagnostics;
 };
 ```
 
 Do not encode failure only through stdout or magic values such as `error = -1`.
+
+M1 `MatCal::Linalg` solvers return `SolverResult` for ordinary numerical failure. Bounds errors, ragged matrix construction, size overflow, and invalid object construction may throw exceptions.
 
 ## Const-Correctness
 
@@ -41,6 +48,14 @@ Legacy signatures frequently use non-const references even when the function cop
 - Returned matrices must own their storage.
 - Views must explicitly document borrowed lifetime.
 - A returned callable must not capture `this` unless the API name and docs make the borrowed lifetime obvious.
+- `Vector::span()` and `DenseMatrix::row()` return borrowed views. They are invalidated by object destruction and by operations that reallocate storage.
+
+## M1 Linalg Ownership
+
+- `Vector` and `DenseMatrix` are owning value types with default copy/move behavior.
+- New APIs do not expose owning raw pointers.
+- New APIs do not return `std::unique_ptr<AbstractMatrix>`.
+- `MatCal::Linalg` does not inherit from legacy `AbstractMatrix`.
 
 ## Printing and Diagnostics
 

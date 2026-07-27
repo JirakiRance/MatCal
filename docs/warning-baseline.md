@@ -23,3 +23,9 @@ M1 should reduce these warnings through compatibility-preserving overloads, loca
 ## Compatibility Rule
 
 Warnings that expose confirmed unsafe behavior should get tests and targeted fixes. Warnings tied to legacy shape, style, or naming should remain documented until a planned compatibility facade exists.
+
+## M1 Linalg Warning Rule
+
+`matcal_linalg` and its tests are built with stricter warning settings than legacy tests. On GCC/Clang-family compilers this includes `-Wall -Wextra -Wpedantic -Werror`.
+
+Legacy warning debt remains documented here and is not required to be zeroed before M1 is accepted.

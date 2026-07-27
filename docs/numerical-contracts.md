@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records current behavior and the desired direction. It does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -42,6 +42,26 @@ accept when residual <= abs_tol + rel_tol * scale
 ```
 
 The scale should be derived from matrix/vector norms and documented per solver.
+
+## M1 Linalg Tolerance Contract
+
+`MatCal::Linalg::SolverOptions` uses:
+
+```text
+absolute_tolerance + relative_tolerance * scale
+```
+
+For pivot checks:
+
+```text
+pivot_factor * (absolute_tolerance + relative_tolerance * scale)
+```
+
+The M1 dense reference solver uses `scale = max(normInf(A), 1)`. All numeric options must be finite; negative tolerances are invalid; `max_iterations` must be nonzero.
+
+`Vector::norm2()` uses a scaled accumulation algorithm so values like `{1e200, 1e200}` do not overflow through an intermediate square sum.
+
+`DenseMatrix` and `Vector` expose `all_finite()` checks. The dense reference solver rejects non-finite input with `SolverStatus::non_finite_input`.
 
 ## Solver Policy Direction
 

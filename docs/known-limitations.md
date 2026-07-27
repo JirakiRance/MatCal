@@ -32,3 +32,12 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - No thread-safety contract exists. Independent objects are generally usable independently; shared mutable objects are not synchronized.
 - No ABI stability contract exists.
 - No Windows-only `windows.h` dependency was found in the core headers during M0.
+
+## M1 Linalg Limitations
+
+- `MatCal::Linalg` is a 0.x development API, not an ABI-stable API.
+- `DenseMatrix` is contiguous row-major storage for small dense work and reference tests. It is not a replacement for future large FEM sparse storage.
+- `solve_dense_partial_pivot` is a reference Gaussian-elimination solver. It is not optimized for large systems and does not provide multiple right-hand sides.
+- `not_positive_definite` and `not_converged` are status vocabulary entries for future algorithms; the M1 dense direct solver does not use them.
+- Skyline, LDLT, CSR, and iterative solver infrastructure remain future work.
+- M1 does not bridge legacy APIs to `MatCal::Linalg`; the targets intentionally remain parallel.

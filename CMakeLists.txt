@@ -20,6 +20,19 @@ target_include_directories(matcal_legacy
 )
 set_target_properties(matcal_legacy PROPERTIES EXPORT_NAME Legacy)
 
+add_library(matcal_linalg
+    src/linalg/DenseSolver.cpp
+)
+add_library(MatCal::Linalg ALIAS matcal_linalg)
+
+target_compile_features(matcal_linalg PUBLIC cxx_std_20)
+target_include_directories(matcal_linalg
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_linalg PROPERTIES EXPORT_NAME Linalg)
+
 function(matcal_configure_test_target target_name)
     if(MATCAL_ENABLE_WARNINGS)
         if(MSVC)
@@ -34,6 +47,23 @@ function(matcal_configure_test_target target_name)
         target_link_options(${target_name} PRIVATE -fsanitize=address,undefined)
     endif()
 endfunction()
+
+function(matcal_configure_linalg_target target_name)
+    if(MATCAL_ENABLE_WARNINGS)
+        if(MSVC)
+            target_compile_options(${target_name} PRIVATE /W4 /permissive- /WX)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+            target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+        endif()
+    endif()
+
+    if(MATCAL_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        target_compile_options(${target_name} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(${target_name} PRIVATE -fsanitize=address,undefined)
+    endif()
+endfunction()
+
+matcal_configure_linalg_target(matcal_linalg)
 
 include(CTest)
 
@@ -63,6 +93,39 @@ if(BUILD_TESTING)
 
     matcal_add_legacy_test(matcal_legacy_sor_regression_tests
         tests/legacy_sor_regression_tests.cpp
+    )
+
+    function(matcal_add_linalg_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Linalg)
+        matcal_configure_linalg_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
+    matcal_add_linalg_test(matcal_linalg_vector_tests
+        tests/linalg/vector_tests.cpp
+    )
+
+    matcal_add_linalg_test(matcal_linalg_dense_matrix_tests
+        tests/linalg/dense_matrix_tests.cpp
+    )
+
+    matcal_add_linalg_test(matcal_linalg_solver_tests
+        tests/linalg/solver_tests.cpp
+    )
+
+    matcal_add_linalg_test(matcal_linalg_public_header_tests
+        tests/linalg/public_headers_main.cpp
+        tests/linalg/header_vector_self_contained.cpp
+        tests/linalg/header_dense_matrix_self_contained.cpp
+        tests/linalg/header_solver_types_self_contained.cpp
+        tests/linalg/header_dense_solver_self_contained.cpp
+    )
+
+    matcal_add_linalg_test(matcal_linalg_multi_tu_tests
+        tests/linalg/multi_tu_main.cpp
+        tests/linalg/multi_tu_a.cpp
+        tests/linalg/multi_tu_b.cpp
     )
 
     add_executable(matcal_multi_tu_link_tests
