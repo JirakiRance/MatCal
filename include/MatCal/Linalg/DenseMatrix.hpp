@@ -158,14 +158,20 @@ public:
 
     double normInf() const {
         double max_row_sum = 0.0;
+        bool saw_nan = false;
         for (size_type r = 0; r < rows_; ++r) {
             double row_sum = 0.0;
             for (size_type c = 0; c < cols_; ++c) {
-                row_sum += std::abs((*this)(r, c));
+                double magnitude = std::abs((*this)(r, c));
+                if (std::isnan(magnitude)) {
+                    saw_nan = true;
+                } else {
+                    row_sum += magnitude;
+                }
             }
             max_row_sum = std::max(max_row_sum, row_sum);
         }
-        return max_row_sum;
+        return saw_nan ? std::numeric_limits<double>::quiet_NaN() : max_row_sum;
     }
 
     const std::vector<double>& values() const noexcept { return values_; }

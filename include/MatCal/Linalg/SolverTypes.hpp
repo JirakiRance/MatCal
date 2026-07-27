@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -36,7 +37,7 @@ inline const char* to_string(SolverStatus status) noexcept {
 }
 
 struct SolverOptions {
-    double absolute_tolerance = 1e-12;
+    double absolute_tolerance = 0.0;
     double relative_tolerance = 1e-12;
     double pivot_factor = 1.0;
     std::size_t max_iterations = 1000;
@@ -52,22 +53,67 @@ struct SolverOptions {
     }
 
     double comparison_tolerance(double scale) const noexcept {
-        return absolute_tolerance + relative_tolerance * scale;
+        if (!std::isfinite(scale) || scale < 0.0) {
+            return std::numeric_limits<double>::max();
+        }
+        double relative_part = saturated_product(relative_tolerance, scale);
+        return saturated_sum(absolute_tolerance, relative_part);
     }
 
     double pivot_tolerance(double scale) const noexcept {
-        return pivot_factor * comparison_tolerance(scale);
+        return saturated_product(pivot_factor, comparison_tolerance(scale));
+    }
+
+private:
+    static double saturated_product(double left, double right) noexcept {
+        if (left == 0.0 || right == 0.0) {
+            return 0.0;
+        }
+        double max = std::numeric_limits<double>::max();
+        if (left > max / right) {
+            return max;
+        }
+        return left * right;
+    }
+
+    static double saturated_sum(double left, double right) noexcept {
+        double max = std::numeric_limits<double>::max();
+        if (left > max - right) {
+            return max;
+        }
+        return left + right;
     }
 };
 
 struct SolverDiagnostic {
     SolverStatus status = SolverStatus::success;
+    std::string code;
+    std::string reason;
+    std::string phase;
+    std::size_t row = invalid_index();
+    std::size_t column = invalid_index();
+    double value = 0.0;
+    double scale = 0.0;
+    double tolerance = 0.0;
     std::string message;
+
+    static constexpr std::size_t invalid_index() noexcept {
+        return std::numeric_limits<std::size_t>::max();
+    }
 };
 
 struct SolverMetrics {
     std::size_t iterations = 0;
+    std::size_t operation_count = 0;
     double residual_norm = 0.0;
+    double absolute_residual_norm = 0.0;
+    double relative_residual_norm = 0.0;
+    double residual_acceptance_tolerance = 0.0;
+    double matrix_scale = 0.0;
+    double rhs_scale = 0.0;
+    double solution_scale = 0.0;
+    double pivot_tolerance_used = 0.0;
+    double minimum_abs_pivot = std::numeric_limits<double>::infinity();
 };
 
 struct SolverResult {

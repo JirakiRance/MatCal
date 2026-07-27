@@ -38,6 +38,12 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - `MatCal::Linalg` is a 0.x development API, not an ABI-stable API.
 - `DenseMatrix` is contiguous row-major storage for small dense work and reference tests. It is not a replacement for future large FEM sparse storage.
 - `solve_dense_partial_pivot` is a reference Gaussian-elimination solver. It is not optimized for large systems and does not provide multiple right-hand sides.
-- `not_positive_definite` and `not_converged` are status vocabulary entries for future algorithms; the M1 dense direct solver does not use them.
+- `not_positive_definite` is a status vocabulary entry for future algorithms. The dense reference solver can use `not_converged` if a finite residual exceeds the acceptance contract.
 - Skyline, LDLT, CSR, and iterative solver infrastructure remain future work.
 - M1 does not bridge legacy APIs to `MatCal::Linalg`; the targets intentionally remain parallel.
+
+## M1.1 Fixed Linalg Contract Issue
+
+- M1 used `max(normInf(A), 1)` and `absolute_tolerance = 1e-12` for pivots. This could reject `1e-20 * I` even though it is nonsingular and condition number 1.
+- M1.1 changes the default absolute tolerance to `0`, keeps relative tolerance at `1e-12`, and uses an unclamped maximum-absolute-entry matrix scale for pivot checks.
+- Finite intermediate overflow in the dense solver is now reported as `breakdown`, not `singular`.

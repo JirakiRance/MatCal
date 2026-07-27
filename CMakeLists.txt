@@ -114,6 +114,10 @@ if(BUILD_TESTING)
         tests/linalg/solver_tests.cpp
     )
 
+    matcal_add_linalg_test(matcal_linalg_scale_contract_tests
+        tests/linalg/scale_contract_tests.cpp
+    )
+
     matcal_add_linalg_test(matcal_linalg_public_header_tests
         tests/linalg/public_headers_main.cpp
         tests/linalg/header_vector_self_contained.cpp

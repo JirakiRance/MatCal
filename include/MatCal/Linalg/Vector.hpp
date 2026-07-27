@@ -117,10 +117,16 @@ public:
 
     double normInf() const {
         double result = 0.0;
+        bool saw_nan = false;
         for (double value : values_) {
-            result = std::max(result, std::abs(value));
+            double magnitude = std::abs(value);
+            if (std::isnan(magnitude)) {
+                saw_nan = true;
+            } else {
+                result = std::max(result, magnitude);
+            }
         }
-        return result;
+        return saw_nan ? std::numeric_limits<double>::quiet_NaN() : result;
     }
 
     void scale(double alpha) {

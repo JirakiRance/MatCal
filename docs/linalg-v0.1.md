@@ -1,6 +1,6 @@
 # MatCal::Linalg v0.1
 
-M1 introduces `MatCal::Linalg` as a new 0.x development API. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
+M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
 
 ## Public Headers
 
@@ -34,6 +34,8 @@ Main contract:
 - `dot`, `norm1`, stable scaled `norm2`, `normInf`, `axpy`, and `scale`.
 - Size mismatches throw `std::invalid_argument`.
 
+Ordinary vector operations do not return `SolverResult`. If finite inputs overflow during `dot`, `norm1`, `axpy`, or `scale`, the resulting double values follow IEEE behavior and may become Inf. `normInf()` reports Inf if present and NaN if any entry is NaN. Solvers must not continue with non-finite intermediates.
+
 ## DenseMatrix
 
 `MatCal::Linalg::DenseMatrix` is an owning row-major dense matrix backed by one contiguous `std::vector<double>`. It does not inherit from `AbstractMatrix`.
@@ -53,6 +55,8 @@ Main contract:
 
 This dense container is a correctness baseline and small-problem utility. It is not the future storage for large FEM sparse systems.
 
+`DenseMatrix::normInf()` is the conventional maximum absolute row sum and can return Inf if a finite row sum overflows. The dense solver does not use this as its pivot scale; it uses a safe maximum absolute coefficient scale so scale computation itself does not silently turn finite input into Inf.
+
 ## Dense Reference Solver
 
 `solve_dense_partial_pivot(const DenseMatrix&, const Vector&, const SolverOptions&)` is a small reference solver using partial-pivot Gaussian elimination.
@@ -63,10 +67,15 @@ It:
 - Does not modify inputs.
 - Returns `SolverResult` instead of printing.
 - Checks dimensions, finite inputs, and solver options.
-- Uses `absolute_tolerance + relative_tolerance * scale`, multiplied by `pivot_factor`, for pivot checks.
-- Uses matrix infinity norm, clamped to at least `1`, as the dense scale.
-- Computes infinity norm of `Ax - b`.
+- Uses `pivot_factor * (absolute_tolerance + relative_tolerance * matrix_scale)` for pivot checks.
+- Uses maximum absolute matrix coefficient as `matrix_scale`; this value is not clamped to `1`.
+- Defaults to `absolute_tolerance = 0`, `relative_tolerance = 1e-12`, `pivot_factor = 1`.
+- Computes absolute residual infinity norm and relative residual.
 - Supports row-swap cases.
 - Reports singular and near-singular pivots with structured status.
+- Returns `breakdown` for non-finite intermediate values during factorization, back substitution, or residual evaluation.
+- Returns no partial-success solution on failure.
+
+Scale invariance contract: multiplying a nonsingular finite system by ordinary finite factors such as `1e-20`, `1`, and `1e20` must not by itself change success into singular. This is covered by regression tests.
 
 It is not a large-scale FEM solver and does not replace future Skyline, LDLT, CSR, or iterative solvers.

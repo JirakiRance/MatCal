@@ -67,6 +67,12 @@ int main() {
     expect_true(!non_finite.all_finite(), "finite check detects Inf");
     DenseMatrix nan_matrix{{std::numeric_limits<double>::quiet_NaN()}};
     expect_true(!nan_matrix.all_finite(), "finite check detects NaN");
+    expect_true(std::isinf(DenseMatrix{{std::numeric_limits<double>::max(), std::numeric_limits<double>::max()}}.normInf()),
+                "DenseMatrix normInf overflow reports Inf");
+    Vector overflow_matvec = DenseMatrix{{std::numeric_limits<double>::max(), std::numeric_limits<double>::max()}}.multiply(Vector{1.0, 1.0});
+    expect_true(!overflow_matvec.all_finite() && std::isinf(overflow_matvec[0]), "matvec can produce Inf");
+    DenseMatrix overflow_matmul = DenseMatrix{{std::numeric_limits<double>::max(), std::numeric_limits<double>::max()}}.multiply(DenseMatrix{{1.0}, {1.0}});
+    expect_true(!overflow_matmul.all_finite() && std::isinf(overflow_matmul(0, 0)), "matmul can produce Inf");
 
     DenseMatrix copy = a;
     copy(0, 0) = 99.0;

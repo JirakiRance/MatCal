@@ -35,9 +35,11 @@ SFL -> MatCal
 
 ## M1 Boundary
 
-M1 is not an SFL integration release. It adds `Vector`, `DenseMatrix`, structured solver types, and a dense reference solver only.
+M1/M1.1 is not an SFL integration release. It adds `Vector`, `DenseMatrix`, structured solver types, diagnostics, metrics, and a dense reference solver only.
 
 Skyline and LDLT are deferred to M2 or later. When added, they must remain general matrix/solver facilities, not SFL-owned mesh, element, material, load, or result-recovery logic.
+
+M1.1 diagnostics remain MatCal-owned and domain-neutral. They are not SFL diagnostics and do not carry SFL AST, source mapping, mesh, region, material, element, load, or result IR fields.
 
 ## SFL Keeps
 

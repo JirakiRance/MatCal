@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -43,7 +43,7 @@ accept when residual <= abs_tol + rel_tol * scale
 
 The scale should be derived from matrix/vector norms and documented per solver.
 
-## M1 Linalg Tolerance Contract
+## M1.1 Linalg Tolerance Contract
 
 `MatCal::Linalg::SolverOptions` uses:
 
@@ -57,11 +57,38 @@ For pivot checks:
 pivot_factor * (absolute_tolerance + relative_tolerance * scale)
 ```
 
-The M1 dense reference solver uses `scale = max(normInf(A), 1)`. All numeric options must be finite; negative tolerances are invalid; `max_iterations` must be nonzero.
+Defaults:
+
+- `absolute_tolerance = 0`
+- `relative_tolerance = 1e-12`
+- `pivot_factor = 1`
+- `max_iterations = 1000`
+
+The default absolute tolerance is zero so small-scale nonsingular systems are not rejected merely because their entries are below a fixed global threshold. The default relative tolerance is `1e-12`, chosen as a conservative double-precision reference value for the current dense baseline.
+
+For pivot checks, the dense reference solver uses `scale = max(abs(A_ij))`, not `max(normInf(A), 1)`. The scale is not clamped to one. If `scale = 0`, the default tolerance is zero and an exactly zero pivot is reported as singular.
+
+All numeric options must be finite; negative tolerances and negative `pivot_factor` are invalid; `max_iterations` must be nonzero. `pivot_factor = 0` is allowed and means exact-pivot mode. Tolerance arithmetic saturates to the largest finite double instead of producing Inf.
 
 `Vector::norm2()` uses a scaled accumulation algorithm so values like `{1e200, 1e200}` do not overflow through an intermediate square sum.
 
 `DenseMatrix` and `Vector` expose `all_finite()` checks. The dense reference solver rejects non-finite input with `SolverStatus::non_finite_input`.
+
+`DenseMatrix::normInf()` can return Inf when a finite row sum overflows. The dense solver uses a separate safe maximum-absolute-entry scale so finite input does not become non-finite during scale computation without diagnosis.
+
+Breakdown is distinct from singular:
+
+- `singular`: a finite pivot is zero or below the pivot tolerance.
+- `breakdown`: a finite-input computation produces NaN/Inf during factorization, back substitution, solution scaling, or residual evaluation.
+
+Residual contract:
+
+```text
+abs_res = ||Ax-b||_inf
+rel_res = abs_res / (matrix_scale * solution_scale + rhs_scale)
+```
+
+If the denominator is zero, `rel_res = 0` only when `abs_res = 0`. Success requires `abs_res <= absolute_tolerance + relative_tolerance * denominator`.
 
 ## Solver Policy Direction
 

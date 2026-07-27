@@ -26,7 +26,7 @@ int main() {
 
     SolverOptions defaults;
     expect_true(defaults.valid(), "default SolverOptions valid");
-    expect_near(defaults.comparison_tolerance(10.0), 1.1e-11, 1e-20, "absolute plus relative tolerance");
+    expect_near(defaults.comparison_tolerance(10.0), 1.0e-11, 1e-20, "relative default tolerance");
 
     SolverOptions invalid = defaults;
     invalid.absolute_tolerance = -1.0;
@@ -40,7 +40,8 @@ int main() {
     expect_solution_01_06(result, "dense solve");
     expect_near(a(0, 0), 4.0, 1e-12, "solver does not modify input matrix");
     expect_near(b[0], 1.0, 1e-12, "solver does not modify input rhs");
-    expect_near(residual_norm_inf(a, result.solution, b), result.metrics.residual_norm, 1e-14, "residual helper");
+    expect_near(residual_norm_inf(a, result.solution, b), result.metrics.absolute_residual_norm, 1e-14, "residual helper");
+    expect_near(result.metrics.residual_norm, result.metrics.absolute_residual_norm, 0.0, "legacy residual alias");
 
     auto repeat = solve_dense_partial_pivot(a, b);
     expect_near(repeat.solution[0], result.solution[0], 0.0, "deterministic solution x0");
@@ -61,6 +62,8 @@ int main() {
     DenseMatrix singular{{1.0, 2.0}, {2.0, 4.0}};
     auto singular_result = solve_dense_partial_pivot(singular, Vector{1.0, 2.0});
     expect_true(singular_result.status == SolverStatus::singular, "singular matrix status");
+    expect_true(!singular_result.diagnostics.empty(), "singular diagnostic exists");
+    expect_true(singular_result.diagnostics[0].code == "pivot_too_small", "singular diagnostic code");
 
     SolverOptions strict = defaults;
     strict.absolute_tolerance = 1e-12;

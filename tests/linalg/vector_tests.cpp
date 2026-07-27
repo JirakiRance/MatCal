@@ -57,10 +57,23 @@ int main() {
     expect_true(std::isfinite(huge.norm2()), "stable norm2 avoids overflow");
     expect_relative(huge.norm2(), std::sqrt(2.0) * 1e200, 1e-12, "stable norm2 value");
 
+    Vector overflow_norm{std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+    expect_true(std::isinf(overflow_norm.norm1()), "norm1 overflow is reported as Inf");
+    expect_true(std::isinf(overflow_norm.dot(overflow_norm)), "dot overflow is reported as Inf");
+
     Vector non_finite{1.0, std::numeric_limits<double>::infinity()};
     expect_true(!non_finite.all_finite(), "finite check detects Inf");
+    expect_true(std::isinf(non_finite.normInf()), "normInf reports Inf");
     Vector nan_values{std::numeric_limits<double>::quiet_NaN()};
     expect_true(!nan_values.all_finite(), "finite check detects NaN");
+    expect_true(std::isnan(nan_values.normInf()), "normInf reports NaN");
+
+    Vector overflow_scale{std::numeric_limits<double>::max()};
+    overflow_scale.scale(2.0);
+    expect_true(!overflow_scale.all_finite() && std::isinf(overflow_scale[0]), "scale can produce Inf");
+    Vector overflow_axpy{std::numeric_limits<double>::max()};
+    overflow_axpy.axpy(1.0, Vector{std::numeric_limits<double>::max()});
+    expect_true(!overflow_axpy.all_finite() && std::isinf(overflow_axpy[0]), "axpy can produce Inf");
 
     Vector copy = listed;
     copy[0] = 9.0;
