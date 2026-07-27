@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -89,6 +89,25 @@ rel_res = abs_res / (matrix_scale * solution_scale + rhs_scale)
 ```
 
 If the denominator is zero, `rel_res = 0` only when `abs_res = 0`. Success requires `abs_res <= absolute_tolerance + relative_tolerance * denominator`.
+
+## M2 Skyline LDLT Contract
+
+`factorize_skyline_ldlt()` supports only real symmetric positive definite matrices. It performs an unpivoted LDLT factorization and rejects non-positive pivots with `SolverStatus::not_positive_definite`.
+
+Status distinction:
+
+- `not_positive_definite`: finite pivot is not positive above the pivot tolerance.
+- `non_finite_input`: stored matrix values or RHS contain NaN/Inf.
+- `breakdown`: finite input produces a non-finite intermediate during factorization or solve.
+- `not_converged`: finite solve completes but residual exceeds the acceptance contract.
+
+The skyline matrix scale is `max(abs(stored_value))`. Pivot tolerance reuses:
+
+```text
+pivot_factor * (absolute_tolerance + relative_tolerance * matrix_scale)
+```
+
+Residual metrics use the same M1.1 definition. The factorization owns its factors and can solve multiple right-hand sides without modifying the original matrix.
 
 ## Solver Policy Direction
 

@@ -69,9 +69,10 @@ It does not contain SFL diagnostics, source locations, AST nodes, materials, ele
 
 `code`, `reason`, and `phase` are stable machine-readable fields. `message` is for humans and should not be parsed by consumers.
 
-Current dense-solver examples:
+Current solver examples:
 
 - `pivot_too_small` with status `singular`.
+- `non_positive_pivot` with status `not_positive_definite`.
 - `non_finite_intermediate` with status `breakdown`.
 - `residual_too_large` with status `not_converged`.
 - `invalid_options`, `matrix_not_square`, `rhs_size_mismatch`, and `non_finite_input` during validation.
@@ -92,7 +93,7 @@ Current dense-solver examples:
 - `pivot_tolerance_used`
 - `minimum_abs_pivot`
 
-For `solve_dense_partial_pivot`, `iterations` records elimination steps and `residual_norm` is retained as an alias for `absolute_residual_norm`.
+For `solve_dense_partial_pivot`, `iterations` records elimination steps and `residual_norm` is retained as an alias for `absolute_residual_norm`. For skyline LDLT, `iterations` records factorization rows or solve size depending on phase, and `operation_count` is a reference work counter rather than a hardware-level flop count.
 
 Residual contract:
 
@@ -124,4 +125,4 @@ Otherwise the result is non-success; the dense reference solver uses `not_conver
 
 Numerical failures should normally return a non-success `SolverResult`. Programmer errors and invalid object access, such as out-of-range indexing or impossible matrix allocation sizes, may still throw exceptions.
 
-On non-success numerical results, the dense solver does not expose partial solutions.
+On non-success numerical results, dense and skyline solvers do not expose partial solutions.

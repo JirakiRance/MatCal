@@ -1,6 +1,6 @@
 # MatCal::Linalg v0.1
 
-M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
+M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. M2 adds general symmetric skyline storage and SPD LDLT. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
 
 ## Public Headers
 
@@ -8,6 +8,8 @@ M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its sc
 - `include/MatCal/Linalg/DenseMatrix.hpp`
 - `include/MatCal/Linalg/SolverTypes.hpp`
 - `include/MatCal/Linalg/DenseSolver.hpp`
+- `include/MatCal/Linalg/SymmetricSkylineMatrix.hpp`
+- `include/MatCal/Linalg/SkylineLdlt.hpp`
 
 Each public header is tested as self-contained and can be included without relying on include order.
 
@@ -78,4 +80,14 @@ It:
 
 Scale invariance contract: multiplying a nonsingular finite system by ordinary finite factors such as `1e-20`, `1`, and `1e20` must not by itself change success into singular. This is covered by regression tests.
 
-It is not a large-scale FEM solver and does not replace future Skyline, LDLT, CSR, or iterative solvers.
+It is not a large-scale FEM solver and does not replace M2 skyline SPD LDLT, future CSR, or iterative solvers.
+
+## Symmetric Skyline and SPD LDLT
+
+M2 adds `SymmetricSkylineMatrix` and `SkylineLdltFactorization`.
+
+`SymmetricSkylineMatrix` is a general numerical symmetric matrix container with row-oriented lower skyline storage. It supports explicit first-column profiles and symmetric nonzero position pairs. It does not accept FEM element connectivity or any SFL type.
+
+`factorize_skyline_ldlt()` computes an unpivoted SPD-only LDLT factorization. `solve_skyline_ldlt()` is a one-shot helper; callers that need multiple right-hand sides should call `factorize_skyline_ldlt()` once and reuse the returned `SkylineLdltFactorization`.
+
+See `docs/skyline-ldlt.md` for the full storage and numerical contract.

@@ -22,6 +22,8 @@ set_target_properties(matcal_legacy PROPERTIES EXPORT_NAME Legacy)
 
 add_library(matcal_linalg
     src/linalg/DenseSolver.cpp
+    src/linalg/SymmetricSkylineMatrix.cpp
+    src/linalg/SkylineLdlt.cpp
 )
 add_library(MatCal::Linalg ALIAS matcal_linalg)
 
@@ -118,18 +120,29 @@ if(BUILD_TESTING)
         tests/linalg/scale_contract_tests.cpp
     )
 
+    matcal_add_linalg_test(matcal_linalg_skyline_matrix_tests
+        tests/linalg/skyline_matrix_tests.cpp
+    )
+
+    matcal_add_linalg_test(matcal_linalg_skyline_ldlt_tests
+        tests/linalg/skyline_ldlt_tests.cpp
+    )
+
     matcal_add_linalg_test(matcal_linalg_public_header_tests
         tests/linalg/public_headers_main.cpp
         tests/linalg/header_vector_self_contained.cpp
         tests/linalg/header_dense_matrix_self_contained.cpp
         tests/linalg/header_solver_types_self_contained.cpp
         tests/linalg/header_dense_solver_self_contained.cpp
+        tests/linalg/header_symmetric_skyline_self_contained.cpp
+        tests/linalg/header_skyline_ldlt_self_contained.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_multi_tu_tests
         tests/linalg/multi_tu_main.cpp
         tests/linalg/multi_tu_a.cpp
         tests/linalg/multi_tu_b.cpp
+        tests/linalg/multi_tu_skyline.cpp
     )
 
     add_executable(matcal_multi_tu_link_tests
