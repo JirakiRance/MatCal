@@ -60,6 +60,17 @@ M2 adds `SymmetricSkylineMatrix`, `SkylineLdltFactorization`, `factorize_skyline
 - M2.1 changes the 0.x tolerance composition to `max(absolute_tolerance, relative_tolerance * scale)`. This is a pre-1.0 contract correction for integration readiness.
 - No precompiled MatCal binary is declared as the default integration vehicle. Consumers should build and link the CMake target for the pinned source version.
 
+## M3 Legacy Migration Policy
+
+M3 starts moving correct Legacy algorithms into shared modern cores.
+
+- `MatCal::Legacy` remains available with the old headers, namespaces, class names, and main signatures.
+- Legacy may depend on a reviewed shared core when doing so preserves source compatibility.
+- `QinJiuShao` now delegates core polynomial algorithms to `MatCal::Polynomial::Polynomial`.
+- Legacy output formatting and old node-list access stay in the facade when they are compatibility behavior rather than reusable math core.
+- Installed packages include legacy headers at the include root so old includes such as `#include "QinJiuShao.hpp"` continue to work for target-based consumers.
+- ABI stability is still not promised.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

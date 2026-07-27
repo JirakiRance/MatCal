@@ -57,3 +57,11 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 - M2 skyline back substitution scanned all later rows and filtered by profile. M2.1 stores column adjacency in the factorization so back substitution visits only profile rows containing the active column.
 - M2.1 changes linalg tolerance composition from `absolute_tolerance + relative_tolerance * scale` to `max(absolute_tolerance, relative_tolerance * scale)`, matching the integration need to express `c * max(scale, 1)`.
+
+## M3 Polynomial Migration Notes
+
+- `QinJiuShao` no longer owns independent implementations of Horner evaluation, arithmetic, derivative, integral, definite integral, or owning callable creation. Those paths delegate to `MatCal::Polynomial::Polynomial`.
+- The legacy `QinJiuShaoNode` negative-degree constructor no longer prints to stdout before throwing.
+- `MatCal::Polynomial::Polynomial` uses dense coefficient storage in M3. Very high sparse-degree workloads may need a future sparse polynomial representation after measured need.
+- Interpolation classes still keep their old structure, though they now indirectly benefit when they use `QinJiuShao` operations.
+- Scalar root solvers, integration beyond `Instant`, RK4, and Newton-for-equations remain legacy-only after this M3 slice.

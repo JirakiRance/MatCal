@@ -1,5 +1,7 @@
 test/
 .vscode/
+build/
+build-release/
 *.exe
 src/output/
 test/output/

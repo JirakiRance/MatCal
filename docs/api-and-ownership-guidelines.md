@@ -57,6 +57,12 @@ Legacy signatures frequently use non-const references even when the function cop
 - New APIs do not return `std::unique_ptr<AbstractMatrix>`.
 - `MatCal::Linalg` does not inherit from legacy `AbstractMatrix`.
 
+## M3 Polynomial Ownership
+
+- `MatCal::Polynomial::Polynomial` owns its coefficient storage.
+- `to_function()` captures a value copy and does not borrow `this`.
+- Legacy `QinJiuShao` adapts to/from the polynomial value type when using migrated math operations.
+
 ## Printing and Diagnostics
 
 Core library code should not print to stdout in new APIs. Use return status, exceptions for programmer errors, or optional caller-provided diagnostics.

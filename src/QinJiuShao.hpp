@@ -24,6 +24,9 @@ Node结点采用{次数，系数}构建
 #include<string>
 #include<functional>
 #include<map>
+#include<limits>
+
+#include "MatCal/Polynomial/Polynomial.hpp"
 
 namespace MatCal{
     namespace Utils{
@@ -42,7 +45,6 @@ public:
     QinJiuShaoNode(int nn=0,double aa=0){
         if(nn<0){
             std::string errInfo="次数需要大于等于0的整数!";
-            std::cout<<errInfo<<"\n";
             this->a=0;
             this->n=0;
             throw std::invalid_argument(errInfo);
@@ -208,17 +210,7 @@ public:
     }
     //秦九韶计算，可传入参数X，计算秦九韶多项式
     double calculate(double x)const{
-        if(this->parameters.empty()) return 0.0;
-        double ret=0;
-        std::vector<QinJiuShaoNode>::const_iterator it = this->parameters.begin();
-        for(int i=this->parameters.begin()->n;i>=0;--i){
-            ret*=x;
-            if(it!=this->parameters.end()&&it->n==i){
-                ret+=it->a;
-                it++;
-            }
-        }
-        return ret;
+        return this->toPolynomial().evaluate(x);
     }
     //显示当前秦九韶多项式
     void show()const{
@@ -256,20 +248,7 @@ public:
     }
     //将多项式转换为拥有系数副本的函数对象，便于数值计算使用
     std::function<double(double)> toFunction() const {
-        auto captured_parameters = this->parameters;
-        return [captured_parameters](double x) {
-            if(captured_parameters.empty()) return 0.0;
-            double ret=0;
-            auto it = captured_parameters.begin();
-            for(int i=captured_parameters.begin()->n;i>=0;--i){
-                ret*=x;
-                if(it!=captured_parameters.end()&&it->n==i){
-                    ret+=it->a;
-                    it++;
-                }
-            }
-            return ret;
-        };
+        return this->toPolynomial().to_function();
     }
 //************************实用方法*******************
     //获取最高次数
@@ -302,40 +281,19 @@ public:
 //************************式级运算********************
     //多项式加法,返回新的秦九韶多项式对象，不改变原来的秦九韶对象
     QinJiuShao operator+(const QinJiuShao& other)const{
-        QinJiuShao result = *this;
-        for(const auto& node : other.getParameters()){
-            result.insert(node.n,node.a);//insert自动维护多项式结构
-        }
-        return result;
+        return QinJiuShao::fromPolynomial(this->toPolynomial() + other.toPolynomial());
     }
     //多项式减法,返回新的秦九韶多项式对象，不改变原来的秦九韶对象
     QinJiuShao operator-(const QinJiuShao& other)const{
-        QinJiuShao result = *this;
-        for(const auto& node : other.getParameters()){
-            result.insert(node.n,-node.a);
-        }
-        return result;
+        return QinJiuShao::fromPolynomial(this->toPolynomial() - other.toPolynomial());
     }
     //多项式乘法，复杂度较高，请谨慎使用---O(n^2)
     QinJiuShao operator*(const QinJiuShao& other) const {
-        QinJiuShao result;
-        //遍历两个多项式的所有项
-        for(const auto& node1 : this->parameters){
-            for(const auto& node2 : other.getParameters()){
-                //次数相加，系数相乘
-                int new_degree = node1.n + node2.n;
-                double new_coeff = node1.a * node2.a;
-                result.insert(new_degree, new_coeff);
-            }
-        }
-        return result;
+        return QinJiuShao::fromPolynomial(this->toPolynomial() * other.toPolynomial());
     }
     //标量乘法
     QinJiuShao operator*(double scalar)const{
-        QinJiuShao result;
-        for (const auto& node : this->parameters)
-            result.insert(node.n, node.a * scalar);
-        return result;
+        return QinJiuShao::fromPolynomial(this->toPolynomial() * scalar);
     }
     //标量乘法的友元函数，支持 scalar * polynomial
     friend QinJiuShao operator*(double scalar, const QinJiuShao& poly){
@@ -343,44 +301,19 @@ public:
     }
     //标量除法
     QinJiuShao operator/(double scalar)const{
-        if(std::abs(scalar)<QinJiuShaoNode::ZERO_THRESHOLD){
-            throw std::invalid_argument("除零错误");
-        }
-        return *this *(1.0/scalar);
+        return QinJiuShao::fromPolynomial(this->toPolynomial() / scalar);
     }
     //求导运算
     QinJiuShao derivative()const{
-        QinJiuShao result;
-        for(const auto& node : this->parameters){
-            if (node.n > 0) {//常数项求导为0，跳过
-                //导数规则：d/dx(a*x^n) = a*n*x^(n-1)
-                int new_degree=node.n-1;
-                double new_coeff=node.a*node.n;
-                result.insert(new_degree,new_coeff);
-            }
-        }
-        return result;
+        return QinJiuShao::fromPolynomial(this->toPolynomial().derivative());
     }
     //积分运算，请指定积分常数
     QinJiuShao integral(double constant=0)const{
-        QinJiuShao result;
-        //添加积分常数
-        result.insert(0,constant);
-        //对每一项积分
-        for (const auto& node : this->parameters) {
-            // 积分规则：_/``a*x^n dx = a/(n+1)*x^(n+1)
-            int new_degree=node.n+1;
-            double new_coeff=node.a/new_degree;
-            result.insert(new_degree, new_coeff);
-        }
-        return result;
+        return QinJiuShao::fromPolynomial(this->toPolynomial().integral(constant));
     }
     //定积分
     double definiteIntegral(double a,double b)const{
-        QinJiuShao f = this->integral(0);
-        double fb = f.calculate(b);
-        double fa = f.calculate(a);
-        return fb-fa;
+        return this->toPolynomial().definite_integral(a, b);
     }
 
     //求内积,默认权系数为1
@@ -392,6 +325,29 @@ public:
 
 //内部维护方法
 private:
+    MatCal::Polynomial::Polynomial toPolynomial() const {
+        std::vector<MatCal::Polynomial::Polynomial::term> terms;
+        terms.reserve(this->parameters.size());
+        for(const auto& node : this->parameters){
+            if(node.n < 0){
+                throw std::invalid_argument("negative polynomial degree");
+            }
+            terms.emplace_back(static_cast<std::size_t>(node.n), node.a);
+        }
+        return MatCal::Polynomial::Polynomial::from_terms(terms);
+    }
+
+    static QinJiuShao fromPolynomial(const MatCal::Polynomial::Polynomial& polynomial) {
+        std::vector<QinJiuShaoNode> nodes;
+        for(const auto& [degree, coefficient] : polynomial.terms_descending()){
+            if(degree > static_cast<std::size_t>(std::numeric_limits<int>::max())){
+                throw std::length_error("legacy polynomial degree exceeds int range");
+            }
+            nodes.emplace_back(static_cast<int>(degree), coefficient);
+        }
+        return QinJiuShao(nodes);
+    }
+
     //内部维护，在构造时使用。强制清理所有无效结点并强制排序
     void cleanup(){
         if (this->parameters.empty()) return;

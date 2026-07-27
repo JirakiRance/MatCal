@@ -6,8 +6,22 @@ project(MatCal
     LANGUAGES CXX
 )
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 option(MATCAL_ENABLE_WARNINGS "Enable compiler warnings for MatCal test targets" ON)
 option(MATCAL_ENABLE_SANITIZERS "Enable AddressSanitizer/UndefinedBehaviorSanitizer for MatCal test targets when supported" OFF)
+
+add_library(matcal_polynomial INTERFACE)
+add_library(MatCal::Polynomial ALIAS matcal_polynomial)
+
+target_compile_features(matcal_polynomial INTERFACE cxx_std_20)
+target_include_directories(matcal_polynomial
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_polynomial PROPERTIES EXPORT_NAME Polynomial)
 
 add_library(matcal_legacy INTERFACE)
 add_library(MatCal::Legacy ALIAS matcal_legacy)
@@ -18,6 +32,7 @@ target_include_directories(matcal_legacy
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
+target_link_libraries(matcal_legacy INTERFACE MatCal::Polynomial)
 set_target_properties(matcal_legacy PROPERTIES EXPORT_NAME Legacy)
 
 add_library(matcal_linalg
@@ -67,6 +82,49 @@ endfunction()
 
 matcal_configure_linalg_target(matcal_linalg)
 
+install(TARGETS matcal_polynomial matcal_legacy matcal_linalg
+    EXPORT MatCalTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(FILES
+    src/Basics.hpp
+    src/Insert.hpp
+    src/Iteration.hpp
+    src/Matrix.hpp
+    src/QinJiuShao.hpp
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(EXPORT MatCalTargets
+    NAMESPACE MatCal::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MatCal
+)
+
+configure_package_config_file(
+    cmake/MatCalConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/MatCalConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MatCal
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/MatCalConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/MatCalConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/MatCalConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MatCal
+)
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -103,6 +161,28 @@ if(BUILD_TESTING)
         matcal_configure_linalg_target(${target_name})
         add_test(NAME ${target_name} COMMAND ${target_name})
     endfunction()
+
+    function(matcal_add_polynomial_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Polynomial MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
+    matcal_add_polynomial_test(matcal_polynomial_tests
+        tests/polynomial_tests.cpp
+    )
+
+    matcal_add_polynomial_test(matcal_polynomial_public_header_tests
+        tests/polynomial_public_headers_main.cpp
+        tests/header_polynomial_self_contained.cpp
+    )
+
+    matcal_add_polynomial_test(matcal_polynomial_multi_tu_tests
+        tests/polynomial_multi_tu_main.cpp
+        tests/polynomial_multi_tu_a.cpp
+        tests/polynomial_multi_tu_b.cpp
+    )
 
     matcal_add_linalg_test(matcal_linalg_vector_tests
         tests/linalg/vector_tests.cpp

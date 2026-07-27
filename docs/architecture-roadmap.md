@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata.
 
 ## Current Shape
 
@@ -8,8 +8,9 @@ MatCal now has two parallel surfaces:
 
 - `MatCal::Legacy`: the header-only legacy library with broad public APIs in five headers.
 - `MatCal::Linalg`: the new 0.x value-type linalg target under `include/MatCal/Linalg`.
+- `MatCal::Polynomial`: the M3 value-type polynomial core extracted from `QinJiuShao`.
 
-The two targets do not depend on each other in M1.
+`MatCal::Legacy` now depends on `MatCal::Polynomial` for migrated polynomial algorithms. `MatCal::Linalg` remains independent from Legacy.
 
 ## Direction
 
@@ -25,6 +26,7 @@ Public targets:
 
 - `MatCal::Legacy`: current API surface.
 - `MatCal::Linalg`: 0.x development API for independent vector/matrix storage and reference solvers.
+- `MatCal::Polynomial`: 0.x development API for polynomial value operations.
 
 Future public targets may include:
 
@@ -37,12 +39,13 @@ Do not describe `MatCal::Linalg` as ABI-stable or production-ready.
 1. Keep M0/M0.1 characterization and regression tests as the compatibility gate.
 2. Maintain M1.1 `Vector`, `DenseMatrix`, `SolverOptions`, `SolverDiagnostic`, `SolverMetrics`, and `SolverResult` as the new baseline.
 3. Maintain M2/M2.1 `SymmetricSkylineMatrix` and SPD `SkylineLdltFactorization` as general numerical facilities.
-4. Add pivoted LU factors as a new explicit API while preserving legacy no-pivot `LU_Decompose`.
-5. Separate matrix storage from solver algorithms.
-6. Replace stdout from core paths with structured status or caller-provided diagnostics.
-7. Expand scale-aware tolerance helpers only when algorithms need them.
-8. Forward legacy APIs to new internals one family at a time, behind compatibility tests.
-9. Add CSR and iterative solver infrastructure after dense and skyline behavior is stable.
+4. Keep the M3 legacy migration matrix current as each family moves from `legacy-only` to `migrated`.
+5. Add pivoted LU factors as a new explicit API while preserving legacy no-pivot `LU_Decompose`.
+6. Separate matrix storage from solver algorithms.
+7. Replace stdout from core paths with structured status or caller-provided diagnostics.
+8. Expand scale-aware tolerance helpers only when algorithms need them.
+9. Forward legacy APIs to new internals one family at a time, behind compatibility tests.
+10. Add CSR and iterative solver infrastructure after dense and skyline behavior is stable.
 
 ## M1 Baseline
 
@@ -67,6 +70,13 @@ M2.1 adds:
 - Separate factorization and solve work counters in `SolverMetrics`.
 - Performance contract tests based on deterministic storage/work counts, not wall-clock timing.
 - The frozen 0.x tolerance composition `max(absolute_tolerance, relative_tolerance * scale)`.
+
+M3 adds:
+
+- `MatCal::Polynomial::Polynomial`.
+- `MatCal::Legacy` delegation from `QinJiuShao` into the shared polynomial core.
+- Installable CMake package files for `find_package(MatCal CONFIG)`.
+- A migration matrix in `docs/legacy-migration-matrix.md`.
 
 ## Future Capabilities
 
