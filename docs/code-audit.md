@@ -1,4 +1,4 @@
-# MatCal M0 Code Audit
+# MatCal Code Audit
 
 Audit date: 2026-07-27.
 
@@ -81,3 +81,56 @@ Warnings remain. They are documented rather than batch-fixed in M0 because many 
 - Added missing standard includes needed by the existing header definitions.
 
 No algorithmic rewrite was performed.
+
+## M0.1 Safety Baseline
+
+M0.1 keeps the legacy API surface intact and applies targeted source-compatible safety repairs only after adding regression coverage. It does not add SFL integration, FEM concepts, CSR, Skyline, LDLT, or a stable `MatCal::Linalg` target.
+
+New regression coverage:
+
+- Triangular matrix copy, assignment, transpose, solve, and metadata.
+- Zero-size tridiagonal construction and solve.
+- `NumericalIntegration::Instant` callable validation, finite input validation, interval handling, and normal integration.
+- Legendre polynomial recurrence against analytic `P0` through `P3`.
+- Determinant row-swap parity and input preservation.
+- Owning `QinJiuShao::toFunction()` callable lifetime.
+- SOR double relaxation factors, invalid omega, residual checks, and non-convergence.
+- Multi-translation-unit link coverage remains in CTest.
+
+M0.1 repaired:
+
+- Upper/lower triangular copy construction and assignment now preserve base dimensions and storage.
+- `TridiagonalMatrix(0)` no longer routes through `n - 1` allocation.
+- `NumericalIntegration::Instant` checks the callable instead of assigning it to `nullptr`.
+- Legendre recurrence uses floating-point coefficients.
+- `determinant` applies row-swap parity.
+- `QinJiuShao::toFunction()` returns an owning callable that captures coefficient state by value.
+- `SOR(..., double omega, ...)` implements the standard update formula and validates `0 < omega < 2`; the legacy `int` overload remains.
+- `LU_Decompose` error text now records the no-pivot limitation without mislabeling every zero-pivot failure as singular.
+
+## M0.1 Actual Build/Test Result
+
+Observed platform:
+
+- OS shell: Windows PowerShell in `E:\Ducuments\codeForVScode\MatCal`.
+- Compiler used by CMake: GNU C++ 15.1.0, `E:/minGW/mingw64/bin/c++.exe`.
+- Build generator: `MinGW Makefiles`.
+
+Commands run:
+
+```powershell
+cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug
+ctest --test-dir build --output-on-failure
+cmake -S . -B build-release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release --config Release
+ctest --test-dir build-release --output-on-failure
+```
+
+CTest result: 6/6 tests passed in both Debug and Release.
+
+Sanitizers were not run in this M0.1 pass.
+
+## Warning Baseline
+
+See `docs/warning-baseline.md`. M0.1 intentionally fixes only warnings tied to the repaired bugs and safety contracts. Remaining warning families are preserved as documented legacy debt for M1 instead of being hidden by broad formatting or API churn.

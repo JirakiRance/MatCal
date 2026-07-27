@@ -42,7 +42,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - Operators: `+`, `-`, polynomial `*`, scalar `*`, scalar `/`, friend scalar-left `*`.
 - Calculus: `derivative() const`, `integral(double constant = 0) const`, `definiteIntegral(double,double) const`, `product(QinJiuShao& other,double,double)`.
 - Errors: empty highest degree throws; scalar division by near-zero throws.
-- Ownership/lifetime: value type. `toFunction()` captures `this`, so the returned function must not outlive the polynomial object.
+- Ownership/lifetime: value type. Since M0.1, `toFunction()` captures polynomial coefficients by value; the returned function owns the state it needs and may outlive the polynomial object. Before M0.1 this callable borrowed `this`.
 
 ### Matrix Base and Storage Types
 
@@ -77,19 +77,19 @@ This inventory describes the current public legacy surface. It is not a promise 
 
 `UpperTriangularMatrix`
 
-- Constructors: `UpperTriangularMatrix(int size = 0)`, `UpperTriangularMatrix(UpperTriangularMatrix&)`, `UpperTriangularMatrix(const Matrix&)`.
+- Constructors: `UpperTriangularMatrix(int size = 0)`, copy/move constructors, `UpperTriangularMatrix(const Matrix&)`.
 - Methods: base overrides; `transpose() const`, `solve(const AbstractMatrix& b) const`, `multiplyUpper(const UpperTriangularMatrix&) const`.
 
 `LowerTriangularMatrix`
 
-- Constructors: `LowerTriangularMatrix(int size = 0)`, `LowerTriangularMatrix(LowerTriangularMatrix&)`, `LowerTriangularMatrix(const LowerTriangularMatrix&)`, `LowerTriangularMatrix(const Matrix&)`.
+- Constructors: `LowerTriangularMatrix(int size = 0)`, copy/move constructors, `LowerTriangularMatrix(const Matrix&)`.
 - Methods: base overrides; `transpose() const`, `solve(const AbstractMatrix& b) const`, `multiplyLower(const LowerTriangularMatrix&) const`.
 
 `TridiagonalMatrix`
 
 - Constructors: `TridiagonalMatrix(int n = 0)`, `TridiagonalMatrix(const std::vector<double>& lower,const std::vector<double>& diag,const std::vector<double>& upper)`, `explicit TridiagonalMatrix(const Matrix&)`.
 - Methods: base overrides; `solve(const AbstractMatrix& B) const`, `lower() const`, `diag() const`, `upper() const`.
-- Contract: Thomas/chase method with no pivoting; zero pivots throw.
+- Contract: Thomas/chase method with no pivoting; zero pivots throw. Since M0.1, zero-size matrices are allowed and keep empty bands.
 
 ## `MatCal::Algorithm::Matrix`
 
@@ -97,7 +97,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - Norms: `norm_one`, `norm_infinite`, `norm_Frobenius`.
 - Direct solvers: `solve_columnElimination(AbstractMatrix& A, AbstractMatrix& b)`, `columnElimination_Transformation(AbstractMatrix& A)`, `determinant(AbstractMatrix& A)`, `LU_Decompose(AbstractMatrix& A,double eps = 1e-12)`.
 - Result types: `LUresult { LowerTriangularMatrix L; UpperTriangularMatrix U; solve(AbstractMatrix& x); }`.
-- Iterative solvers: `Iteration_Result`, `Jacobi`, `Gauss_Seidel`, `SOR(AbstractMatrix&,AbstractMatrix&,int omega,double epsilon = 1e-6,int max_iterations = 100)`.
+- Iterative solvers: `Iteration_Result`, `Jacobi`, `Gauss_Seidel`, `SOR(AbstractMatrix&,AbstractMatrix&,double omega,double epsilon = 1e-6,int max_iterations = 100)`, legacy `SOR(AbstractMatrix&,AbstractMatrix&,int omega,double epsilon = 1e-6,int max_iterations = 100)`.
 - Eigen solvers: `PowerMethod_Result`, `PowerMethod`, `PowerMethod_reverse`.
 - Input mutation: signatures use non-const references. Some functions copy internally and do not mutate input; elementary transformations do mutate input.
 
@@ -161,6 +161,7 @@ double determinant(AbstractMatrix& A);
 LUresult LU_Decompose(AbstractMatrix& A, double eps = 1e-12);
 Iteration_Result Jacobi(AbstractMatrix& A, AbstractMatrix& b, double epsilon = 1e-6, int max_iterations = 100);
 Iteration_Result Gauss_Seidel(AbstractMatrix& A, AbstractMatrix& b, double epsilon = 1e-6, int max_iterations = 100);
+Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, double omega, double epsilon = 1e-6, int max_iterations = 100);
 Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100);
 PowerMethod_Result PowerMethod(AbstractMatrix& A, double eps = 1e-6, int max_iter = 1000);
 PowerMethod_Result PowerMethod_reverse(AbstractMatrix& A, double near_num = 0, double eps = 1e-6, int max_iter = 1000);

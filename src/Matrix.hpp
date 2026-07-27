@@ -850,9 +850,10 @@ protected:      //父类虚函数实现
 
 public:     //构造析构
     UpperTriangularMatrix(int size=0) : AbstractTriangularMatrix(size) {}
-    UpperTriangularMatrix(UpperTriangularMatrix&u){
-        this->data=u.getData();
-    }
+    UpperTriangularMatrix(const UpperTriangularMatrix&) = default;
+    UpperTriangularMatrix(UpperTriangularMatrix&&) noexcept = default;
+    UpperTriangularMatrix& operator=(const UpperTriangularMatrix&) = default;
+    UpperTriangularMatrix& operator=(UpperTriangularMatrix&&) noexcept = default;
     UpperTriangularMatrix(const Matrix& dense) : AbstractTriangularMatrix(dense.getRows()){
         if(!dense.isSquare())
             throw std::invalid_argument("Triangular matrix must be square");
@@ -961,12 +962,10 @@ protected:      //父类虚函数实现
 
 public:     //构造析构
     LowerTriangularMatrix(int size=0) : AbstractTriangularMatrix(size) {}
-    LowerTriangularMatrix(LowerTriangularMatrix&l){
-        this->data=l.getData();
-    }
-    LowerTriangularMatrix(const LowerTriangularMatrix& l){
-        this->data=l.getData();
-    }
+    LowerTriangularMatrix(const LowerTriangularMatrix&) = default;
+    LowerTriangularMatrix(LowerTriangularMatrix&&) noexcept = default;
+    LowerTriangularMatrix& operator=(const LowerTriangularMatrix&) = default;
+    LowerTriangularMatrix& operator=(LowerTriangularMatrix&&) noexcept = default;
     LowerTriangularMatrix(const Matrix& dense) : AbstractTriangularMatrix(dense.getRows()) {
         if(!dense.isSquare())
             throw std::invalid_argument("Triangular matrix must be square");
@@ -1078,6 +1077,12 @@ public:
         : AbstractMatrix(diag.size(), diag.size()),
           l(lower), d(diag), u(upper) {
         int n = static_cast<int>(d.size());
+        if (n == 0) {
+            if (!l.empty() || !u.empty())
+                throw std::invalid_argument("Diagonal size mismatch");
+            rows = cols = 0;
+            return;
+        }
         if (static_cast<int>(l.size()) != n - 1 ||
             static_cast<int>(u.size()) != n - 1)
             throw std::invalid_argument("Diagonal size mismatch");
@@ -1090,6 +1095,13 @@ public:
         if (!mat.isSquare())
             throw std::invalid_argument("Tridiagonal matrix must be square");
         int n = mat.getRows();
+        if (n == 0) {
+            rows = cols = 0;
+            l.clear();
+            d.clear();
+            u.clear();
+            return;
+        }
         l.resize(n - 1);
         d.resize(n);
         u.resize(n - 1);
@@ -1115,6 +1127,12 @@ public:
             throw std::invalid_argument("Size must be non-negative");
         rows = cols = newRows;
         int n = newRows;
+        if (n == 0) {
+            l.clear();
+            d.clear();
+            u.clear();
+            return;
+        }
         l.resize(n - 1);
         d.resize(n);
         u.resize(n - 1);
@@ -1217,6 +1235,8 @@ public:
             throw std::invalid_argument("Dimension not match");
         int n = rows;
         int nrhs = B.getCols();
+        if (n == 0)
+            return std::make_unique<Matrix>(0, nrhs);
 
         //拷贝一份
         std::vector<double> dl = l;
@@ -1643,6 +1663,8 @@ namespace MatCal::Algorithm::Matrix{
         double ret=1.0;
         for(int i=0;i<n;++i)
             ret*=upper->get(i,i);
+        if(log.size() % 2 == 1)
+            ret = -ret;
         return ret;
     }
 
@@ -1681,7 +1703,7 @@ namespace MatCal::Algorithm::Matrix{
             // 2. 检查主元，避免除零
             double pivot = A.get(i, i);
             if (std::abs(pivot) < eps) {
-                throw std::runtime_error("Matrix is singular or near singular, cannot perform A=LU decomposition without pivoting.");
+                throw std::runtime_error("No-pivot LU failed: zero or near-zero pivot encountered; matrix may still be invertible with pivoting.");
             }
 
             // 3. 计算 U 的元素 (U_ij = A_ij - sum(L_ik * U_kj))
@@ -1859,8 +1881,8 @@ namespace MatCal::Algorithm::Matrix{
     }
 
     //SOR方法，需要传入omega参数，0<omega<2
-    inline Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100) {
-        if (omega >= 2 || omega <= 0) {
+    inline Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, double omega, double epsilon = 1e-6, int max_iterations = 100) {
+        if (!std::isfinite(omega) || omega >= 2 || omega <= 0) {
             throw std::invalid_argument("omega should be in (0,2) !");
         }
         
@@ -1895,7 +1917,7 @@ namespace MatCal::Algorithm::Matrix{
                     if (std::abs(diag_val) < 1e-12)
                         throw std::runtime_error("Zero diagonal element found, SOR method fails");
                     double gauss = (dense_b->get(i, k) - sum) / diag_val;//相对于Gauss,只改了这两行
-                    double new_val = gauss * omega + (1 - omega) * dense_A->get(i, k);
+                    double new_val = gauss * omega + (1 - omega) * x->get(i, k);
                     x_new->set(i, k, new_val);
                 }//for i
             }//for k
@@ -1924,6 +1946,10 @@ namespace MatCal::Algorithm::Matrix{
         result.root = *x;
         return result;
     
+    }
+
+    inline Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100) {
+        return SOR(A, b, static_cast<double>(omega), epsilon, max_iterations);
     }
 
 

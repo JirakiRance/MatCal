@@ -38,12 +38,32 @@ endfunction()
 include(CTest)
 
 if(BUILD_TESTING)
-    add_executable(matcal_characterization_tests
+    function(matcal_add_legacy_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
+    matcal_add_legacy_test(matcal_characterization_tests
         tests/characterization_tests.cpp
     )
-    target_link_libraries(matcal_characterization_tests PRIVATE MatCal::Legacy)
-    matcal_configure_test_target(matcal_characterization_tests)
-    add_test(NAME matcal_characterization_tests COMMAND matcal_characterization_tests)
+
+    matcal_add_legacy_test(matcal_legacy_triangular_regression_tests
+        tests/legacy_triangular_regression_tests.cpp
+    )
+
+    matcal_add_legacy_test(matcal_legacy_zero_size_regression_tests
+        tests/legacy_zero_size_regression_tests.cpp
+    )
+
+    matcal_add_legacy_test(matcal_legacy_numerics_regression_tests
+        tests/legacy_numerics_regression_tests.cpp
+    )
+
+    matcal_add_legacy_test(matcal_legacy_sor_regression_tests
+        tests/legacy_sor_regression_tests.cpp
+    )
 
     add_executable(matcal_multi_tu_link_tests
         tests/multi_tu_main.cpp

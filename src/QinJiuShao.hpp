@@ -254,10 +254,21 @@ public:
     const std::vector<QinJiuShaoNode>& getParameters() const {
         return this->parameters;
     }
-    //将多项式转换为函数对象，便于数值计算使用.注意，此方法依赖于秦九韶多项式对象
+    //将多项式转换为拥有系数副本的函数对象，便于数值计算使用
     std::function<double(double)> toFunction() const {
-        return [this](double x) {
-            return calculate(x);
+        auto captured_parameters = this->parameters;
+        return [captured_parameters](double x) {
+            if(captured_parameters.empty()) return 0.0;
+            double ret=0;
+            auto it = captured_parameters.begin();
+            for(int i=captured_parameters.begin()->n;i>=0;--i){
+                ret*=x;
+                if(it!=captured_parameters.end()&&it->n==i){
+                    ret+=it->a;
+                    it++;
+                }
+            }
+            return ret;
         };
     }
 //************************实用方法*******************

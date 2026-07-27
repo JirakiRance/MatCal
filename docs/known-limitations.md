@@ -2,17 +2,24 @@
 
 This list is intentionally direct. Do not treat confirmed bugs as the standard for future new APIs.
 
-## Confirmed Bugs / High-Risk Behavior
+## M0.1 Fixed High-Risk Bugs
 
-- `NumericalIntegration::Instant` assigns `_func = nullptr` instead of checking it. Risk: any valid function is cleared, leading to runtime failure when called. Compatibility handling: add a safe replacement, then keep legacy wrapper with a bug note or corrected behavior at a version boundary.
-- `SOR` takes `int omega`, preventing normal relaxation factors such as `1.25`, and uses `dense_A->get(i,k)` where the old iterate should be used. Risk: wrong results except cases like `omega == 1` where the bug is masked. Compatibility handling: add `SOR(..., double omega, ...)` or a new solver API; keep legacy int overload deprecated.
+- `NumericalIntegration::Instant` now checks `_func` instead of assigning it to `nullptr`. Empty callables and non-finite inputs throw `std::invalid_argument`.
+- `SOR` now has a `double omega` overload, validates finite `0 < omega < 2`, and uses the correct old iterate in the relaxation update. The legacy `int` overload remains as a wrapper.
+- `determinant` now applies row-swap parity and keeps the input matrix unchanged.
+- `Matrix` triangular copy/assignment behavior now preserves base dimensions and storage metadata.
+- `TridiagonalMatrix(0)` now creates empty bands instead of attempting a huge `size_t` allocation.
+- `OrthogonalPolynomials::Legendre` now uses floating-point recurrence coefficients.
+- `QinJiuShao::toFunction()` now captures coefficient state by value, so returned callables may outlive the source polynomial.
+
+## Remaining Confirmed Bugs / High-Risk Behavior
+
 - `LU_Decompose` has no pivoting. Risk: fails on invertible matrices with zero/small leading pivots. Compatibility handling: document as no-pivot LU; add pivoted LU under a new name/result type.
 - `solve_columnElimination` lacks complete dimension and pivot validation. Risk: singular systems can produce division by zero or unclear failures. Compatibility handling: add explicit status-based direct solver.
-- `determinant` ignores row-swap sign from column elimination. Risk: determinant sign can be wrong after pivot swaps. Compatibility handling: fix in new implementation; preserve old behavior only through legacy if needed.
-- `Matrix(AbstractMatrix&)` and some triangular copy constructors do not explicitly initialize base dimensions. Risk: copied objects can have mismatched metadata and storage. Compatibility handling: add tests before fixing; fix as source-compatible bug repair if no external code depends on broken metadata.
-- `TridiagonalMatrix(0)` routes through `resize(0,0)` and resizes `n - 1`. Risk: negative-to-size_t conversion may attempt huge allocation. Compatibility handling: fix zero-size handling with tests.
-- `OrthogonalPolynomials::Legendre` uses integer division in recurrence coefficients. Risk: wrong polynomial coefficients for higher orders. Compatibility handling: add numeric tests and fix in M1 or M2.
-- `QinJiuShao::toFunction()` captures `this`. Risk: dangling callable after polynomial destruction. Compatibility handling: add `toOwningFunction()` or change new API to capture a value; deprecate borrowed callable.
+- `solve_Linear_System` automatically tries multiple algorithms. Risk: policy and diagnostics are mixed into a low-level helper. Compatibility handling: preserve legacy behavior, then add explicit status-based solver selection.
+- `Matrix(AbstractMatrix&)` still takes a non-const reference even though it copies. Risk: const callers cannot use it directly. Compatibility handling: add const-safe overloads in M1 without removing the old constructor.
+- Several dynamic casts assume dense conversion success. Risk: future matrix types could expose unchecked null paths. Compatibility handling: centralize checked conversions in M1 internals.
+- Some numerical entry points still accept NaN/Inf without explicit contracts.
 
 ## Design Limitations
 

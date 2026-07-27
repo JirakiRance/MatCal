@@ -20,6 +20,25 @@ Binary/ABI compatibility means already compiled consumers can link against a new
 - Do not overwrite or replace historical compiled binaries used by PT or other projects.
 - Do not promise cross-compiler or cross-version ABI stability.
 
+## M0.1 Compatibility Notes
+
+M0.1 is a source-compatible safety repair pass. It preserves public headers, namespaces, class names, and legacy entry points.
+
+Source-compatible changes:
+
+- `UpperTriangularMatrix` and `LowerTriangularMatrix` now use correct copy/move/assignment behavior while keeping the existing constructor forms available.
+- `TridiagonalMatrix(0)` is now explicitly allowed; its internal bands are empty, and solving an empty right-hand side returns an empty result.
+- `NumericalIntegration::Instant` now throws clear `std::invalid_argument` exceptions for an empty callable, non-finite endpoints, non-finite `eps`, and invalid `eps`.
+- `OrthogonalPolynomials::Legendre` now returns mathematically correct recurrence coefficients.
+- `determinant` now returns the correct sign when row swaps are required.
+- `QinJiuShao::toFunction()` now captures polynomial coefficients by value, so the returned callable owns the state it needs.
+- `SOR(AbstractMatrix&, AbstractMatrix&, double, ...)` is added as the precise overload. The old `int omega` overload remains and forwards to the double overload.
+- `LU_Decompose` remains a no-pivot LU routine. Its failure message was clarified; pivoted LU is still a future API.
+
+Behavior changes are intentional bug fixes. They may affect code that accidentally depended on broken behavior, such as `Instant` always clearing the callable, `determinant` returning the wrong sign after a row swap, or `toFunction()` reflecting mutations to a still-live polynomial after the callable was created.
+
+ABI compatibility is not promised. Because MatCal remains header-only, existing consumers should recompile to pick up M0.1 fixes. M0.1 does not overwrite or replace any historical compiled MatCal binary used by PT or other projects.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

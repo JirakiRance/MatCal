@@ -19,6 +19,7 @@ namespace MatCal{
 #include<functional>
 #include<vector>
 #include<cmath>
+#include<algorithm>
 #include<climits>
 #include"Matrix.hpp"
 #include"QinJiuShao.hpp"
@@ -384,7 +385,7 @@ public:
         QinJiuShao ret = _x;
         int target = 2;
         while(target<=n){
-            ret = _x * ((2*target-1)/(target)) *dp[1]- ((target-1)/(target)) * dp[0];
+            ret = _x * (static_cast<double>(2*target-1)/(target)) *dp[1]- (static_cast<double>(target-1)/(target)) * dp[0];
             dp[0] = dp[1];
             dp[1] = ret;
             ++target;
@@ -399,10 +400,13 @@ class NumericalIntegration{
 public:
     //指定函数，按定义积分
     static double Instant(std::function<double(double)> _func,double a,double b,double eps=1e-6){
+        if(!std::isfinite(a) || !std::isfinite(b) || !std::isfinite(eps)){
+            throw std::invalid_argument("a, b and eps should be finite!");
+        }
         if(a>b){
             throw std::invalid_argument("a should <= b !");
         }
-        if(_func = nullptr){
+        if(!_func){
             throw std::invalid_argument("_func cannot be nullptr!");
         }
         if(eps<=0 || eps > (b-a)){
@@ -411,7 +415,8 @@ public:
         double curr = a;
         double ret = 0;
         while(curr<b){
-            ret += _func(curr) * eps;
+            double width = std::min(eps, b - curr);
+            ret += _func(curr) * width;
             curr+=eps;
         }
         return ret;
