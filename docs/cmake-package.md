@@ -1,6 +1,6 @@
 # CMake Package
 
-M3 added installable CMake package metadata for MatCal. M4 extends the package exports to Roots and Interpolation. M5 extends the package exports to Calculus and ODE. M6 extends the package exports to Nonlinear and LeastSquares.
+M3 added installable CMake package metadata for MatCal. M4 extends the package exports to Roots and Interpolation. M5 extends the package exports to Calculus and ODE. M6 extends the package exports to Nonlinear and LeastSquares. M7 adds more public headers under the existing `MatCal::Linalg` and `MatCal::Calculus` targets.
 
 ## Build-Tree Use
 
@@ -11,7 +11,7 @@ add_subdirectory(path/to/MatCal)
 target_link_libraries(app PRIVATE MatCal::Linalg)
 ```
 
-M3 also exposes:
+M3 through M6 also expose:
 
 ```cmake
 target_link_libraries(app PRIVATE MatCal::Polynomial)
@@ -22,6 +22,19 @@ target_link_libraries(app PRIVATE MatCal::ODE)
 target_link_libraries(app PRIVATE MatCal::Nonlinear)
 target_link_libraries(app PRIVATE MatCal::LeastSquares)
 target_link_libraries(app PRIVATE MatCal::Legacy)
+```
+
+M7 iterative solvers and power eigen solvers are used through `MatCal::Linalg`:
+
+```cpp
+#include "MatCal/Linalg/IterativeSolvers.hpp"
+#include "MatCal/Linalg/EigenSolvers.hpp"
+```
+
+M7 multivariable derivative helpers are used through `MatCal::Calculus`:
+
+```cpp
+#include "MatCal/Calculus/Calculus.hpp"
 ```
 
 ## Install-Tree Use
@@ -55,4 +68,4 @@ Installed files include:
 
 - The package does not promise ABI stability.
 - The default integration model is source build through CMake, not a precompiled binary.
-- SFL/FEM integration is still out of scope for M6.
+- SFL/FEM integration is still out of scope for M7.

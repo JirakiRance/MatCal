@@ -86,6 +86,14 @@ Legacy signatures frequently use non-const references even when the function cop
 - `MatCal::Interpolation` polynomial interpolation functions return owning `Polynomial` values and, for Newton methods, owning divided-difference tables.
 - Legacy interpolation facades convert these owning polynomial values back to `QinJiuShao` while preserving old getter shapes.
 
+## M7 Matrix, Eigen, and Derivative Ownership
+
+- Legacy-to-Linalg adapters deep-copy data and live only on the Legacy side. They do not create borrowed views into legacy matrices.
+- Linalg-to-Legacy adapters return owning legacy `Matrix` values for compatibility facades.
+- Stationary iterative solver results own their `Vector` solution only on success. Numerical failure returns structured diagnostics without a partial solution.
+- Eigen solver results own their eigenvector only on success. Sign of the eigenvector remains unconstrained.
+- `MatCal::Calculus::partial_difference` and `gradient` copy the input state before perturbing coordinates and do not retain the callable after evaluation.
+
 ## Printing and Diagnostics
 
 Core library code should not print to stdout in new APIs. Use return status, exceptions for programmer errors, or optional caller-provided diagnostics.

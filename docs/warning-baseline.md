@@ -47,5 +47,13 @@ Legacy warning debt remains documented here and is not required to be zeroed bef
 ## M6 Remaining Legacy Warnings
 
 - `QinJiuShao(int, std::vector<double>&)` still compares an `int` loop index with `zeros.size()`.
-- `Derivative::dF_dx` still compares an `int` loop index with `xs.size()`.
+- `solve_Linear_System` may still appear unused in focused test builds.
+
+## Fixed in M7
+
+- `Derivative::pF_px` and `Derivative::dF_dx` no longer own their old finite-difference loops. They delegate to `MatCal::Calculus`, which also removes the previous `Derivative::dF_dx` signed/unsigned loop warning source.
+
+## M7 Remaining Legacy Warnings
+
+- `QinJiuShao(int, std::vector<double>&)` still compares an `int` loop index with `zeros.size()`.
 - `solve_Linear_System` may still appear unused in focused test builds.

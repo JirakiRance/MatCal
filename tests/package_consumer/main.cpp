@@ -1,6 +1,8 @@
 #include <vector>
 
 #include "MatCal/Linalg/DenseSolver.hpp"
+#include "MatCal/Linalg/EigenSolvers.hpp"
+#include "MatCal/Linalg/IterativeSolvers.hpp"
 #include "MatCal/Calculus/Calculus.hpp"
 #include "MatCal/Interpolation/LinearInterpolator.hpp"
 #include "MatCal/Interpolation/PolynomialInterpolation.hpp"
@@ -73,6 +75,16 @@ int main() {
         MatCal::Linalg::Vector{6.0, 8.0});
     if (!result.success()) {
         return 3;
+    }
+    auto iterative = MatCal::Linalg::solve_gauss_seidel(
+        MatCal::Linalg::DenseMatrix{{4.0, 1.0}, {2.0, 3.0}},
+        MatCal::Linalg::Vector{1.0, 2.0});
+    if (!iterative.success()) {
+        return 12;
+    }
+    auto eigen = MatCal::Linalg::dominant_eigenpair(MatCal::Linalg::DenseMatrix::identity(1));
+    if (!eigen.success()) {
+        return 13;
     }
     return result.solution[0] == 3.0 && result.solution[1] == 2.0 ? 0 : 4;
 }

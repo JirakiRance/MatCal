@@ -15,7 +15,7 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 ## Remaining Confirmed Bugs / High-Risk Behavior
 
 - `LU_Decompose` has no pivoting. Risk: fails on invertible matrices with zero/small leading pivots. Compatibility handling: document as no-pivot LU; add pivoted LU under a new name/result type.
-- `solve_columnElimination` lacks complete dimension and pivot validation. Risk: singular systems can produce division by zero or unclear failures. Compatibility handling: add explicit status-based direct solver.
+- `solve_columnElimination` now delegates to the structured dense partial-pivot solver, but its legacy facade still maps numerical failure to exceptions rather than returning `SolverResult`.
 - `solve_Linear_System` automatically tries multiple algorithms. Risk: policy and diagnostics are mixed into a low-level helper. Compatibility handling: preserve legacy behavior, then add explicit status-based solver selection.
 - `Matrix(AbstractMatrix&)` still takes a non-const reference even though it copies. Risk: const callers cannot use it directly. Compatibility handling: add const-safe overloads in M1 without removing the old constructor.
 - Several dynamic casts assume dense conversion success. Risk: future matrix types could expose unchecked null paths. Compatibility handling: centralize checked conversions in M1 internals.
@@ -28,7 +28,7 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - Many dynamic casts assume `toNormalMatrix()` returns `Matrix`; several are checked, but not all.
 - Core code prints to stdout in legacy `show()` helpers. M6 removed the `NewtonForEquations` validation-path stdout from the migrated solve path.
 - Sparse storage is triplet/vector based with linear lookup; duplicate triplets are not merged by the constructor.
-- Fixed absolute tolerances dominate numerical decisions.
+- Some remaining legacy-only paths still use fixed absolute tolerances.
 - No thread-safety contract exists. Independent objects are generally usable independently; shared mutable objects are not synchronized.
 - No ABI stability contract exists.
 - No Windows-only `windows.h` dependency was found in the core headers during M0.
@@ -73,13 +73,13 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 ## M5 Calculus and ODE Migration Notes
 
-- Legacy scalar `Derivative::dy_dx` and `Derivative::dy_dx_center` now delegate to `MatCal::Calculus`; `pF_px` and `dF_dx` remain legacy-only.
+- Legacy scalar `Derivative::dy_dx` and `Derivative::dy_dx_center` now delegate to `MatCal::Calculus`; M7 extends this to `pF_px` and `dF_dx`.
 - Legacy `NumericalIntegration::Instant`, `NewtonCotes`, `CompositeNewtonCotes`, and callable `Romberg` now delegate to `MatCal::Calculus`.
 - `Instant` now supports reverse intervals with signed results. Code that depended on reverse intervals throwing should check intervals before calling.
 - `Romberg` now reports non-convergence through the legacy throwing path instead of returning an error estimate as a successful integral value.
 - Legacy `ODE::SimpleEuler`, `ODE::Euler`, `ODE::RungeKutta_44`, and PT-style `Integrate::RK4::step/step2` now delegate to `MatCal::ODE`.
 - Legacy ODE table APIs still require positive `h`; the new `MatCal::ODE` core allows negative `dt` by option for backward stepping.
-- Multivariable derivative helpers remain legacy-only.
+- M7 migrates `pF_px` and `dF_dx`.
 
 ## M6 Nonlinear, Least-Squares, and Interpolation Migration Notes
 
@@ -89,3 +89,14 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - M6 least-squares weights are strictly positive. Code that wants zero-weight masking should filter samples or use a future explicitly documented masking API.
 - Legacy `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite` now delegate to `MatCal::Interpolation`.
 - Duplicate or non-finite interpolation nodes are rejected by the new core. Code that accidentally depended on duplicate-node division by zero must clean inputs before calling.
+
+## M7 Matrix, Iterative, Eigen, and Derivative Migration Notes
+
+- Legacy matrix-to-linalg adapters deep-copy data and reject non-finite values. They do not provide zero-copy views.
+- Legacy `solve_columnElimination` now delegates to `MatCal::Linalg::solve_dense_partial_pivot`. Multiple right-hand sides are solved column-by-column; a future factorization object could avoid repeated factorization.
+- Legacy `Jacobi`, `Gauss_Seidel`, and `SOR` now delegate to `MatCal::Linalg` stationary solvers. Core non-convergence returns `SolverStatus::not_converged` without a partial solution; the legacy facade maps this to `converged=false`.
+- `MatCal::Linalg` stationary solvers are dense reference algorithms. They do not include sparse matrix support, preconditioners, or convergence guarantees for non-diagonally-dominant systems.
+- Legacy `PowerMethod` and `PowerMethod_reverse` now delegate to `MatCal::Linalg` eigen solvers. Shifted inverse power uses the dense partial-pivot solver instead of legacy no-pivot LU.
+- The M7 eigen solvers are basic dense power iterations. Repeated, clustered, or difficult eigenvalues may converge slowly or report `not_converged`.
+- Legacy `LU_Decompose` remains no-pivot LU and is not silently replaced with pivoted LU.
+- `Derivative::pF_px` and `Derivative::dF_dx` now delegate to `MatCal::Calculus` partial derivative and gradient helpers.

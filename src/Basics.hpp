@@ -107,18 +107,28 @@ public:
 
     //Func_F求偏导pF/px(指定某一个位置)，本方法不对索引越界负责
     static double pF_px(Func_F _func,std::vector<double>& xs,int i,double eps=1e-6){
-        std::vector<double> delta_vector=xs;
-        delta_vector[i]+=eps;
-        return (
-            ( _func(delta_vector) - _func(xs) ) / eps
-        );
+        if(i < 0)
+            throw std::out_of_range("partial derivative coordinate is out of range");
+        MatCal::Calculus::MultivariateFunction adapter = [_func](const std::vector<double>& values) {
+            return _func(values);
+        };
+        auto result = MatCal::Calculus::partial_difference(adapter, xs, static_cast<std::size_t>(i), eps);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        return result.value;
     }
 
     //Func_F求全导dF_dx
     static double dF_dx(Func_F _func,std::vector<double>& xs,double eps=1e-6){
-        double sum=0;
-        for(int i=0;i<xs.size();++i)
-            sum+=pF_px(_func,xs,i,eps);
+        MatCal::Calculus::MultivariateFunction adapter = [_func](const std::vector<double>& values) {
+            return _func(values);
+        };
+        auto result = MatCal::Calculus::gradient(adapter, xs, eps);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        double sum = 0.0;
+        for(double value : result.values)
+            sum += value;
         return sum;
     }
 };

@@ -1,6 +1,6 @@
 # MatCal::Linalg v0.1
 
-M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. M2 adds general symmetric skyline storage and SPD LDLT. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
+M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. M2 adds general symmetric skyline storage and SPD LDLT. M7 adds stationary iterative solvers and power eigen solvers. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
 
 ## Public Headers
 
@@ -8,6 +8,8 @@ M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its sc
 - `include/MatCal/Linalg/DenseMatrix.hpp`
 - `include/MatCal/Linalg/SolverTypes.hpp`
 - `include/MatCal/Linalg/DenseSolver.hpp`
+- `include/MatCal/Linalg/IterativeSolvers.hpp`
+- `include/MatCal/Linalg/EigenSolvers.hpp`
 - `include/MatCal/Linalg/SymmetricSkylineMatrix.hpp`
 - `include/MatCal/Linalg/SkylineLdlt.hpp`
 
@@ -80,7 +82,45 @@ It:
 
 Scale invariance contract: multiplying a nonsingular finite system by ordinary finite factors such as `1e-20`, `1`, and `1e20` must not by itself change success into singular. This is covered by regression tests.
 
-It is not a large-scale FEM solver and does not replace M2 skyline SPD LDLT, future CSR, or iterative solvers.
+It is not a large-scale FEM solver and does not replace M2 skyline SPD LDLT, future CSR, or specialized iterative solvers.
+
+## Stationary Iterative Solvers
+
+M7 adds:
+
+- `solve_jacobi`
+- `solve_gauss_seidel`
+- `solve_sor`
+
+These functions reuse the legacy Jacobi, Gauss-Seidel, and corrected SOR update formulas over `DenseMatrix` and `Vector`. They return the existing `SolverResult` type and record iterations, residual metrics, matrix/RHS/solution scale, diagonal tolerance, and operation count.
+
+Contracts:
+
+- matrix must be square;
+- RHS and optional initial guess must match size;
+- inputs must be finite;
+- diagonal entries must be above `pivot_factor * max(abs_tol, rel_tol * matrix_scale)`;
+- `solve_sor` requires finite `0 < omega < 2`;
+- success is based on the same absolute/relative residual acceptance style used by the dense solver;
+- numerical failure and non-convergence do not return partial-success solutions.
+
+## Power Eigen Solvers
+
+M7 adds:
+
+- `EigenStatus`
+- `EigenOptions`
+- `EigenDiagnostic`
+- `EigenMetrics`
+- `EigenResult`
+- `dominant_eigenpair`
+- `inverse_power_eigenpair`
+
+The dominant power method reuses the legacy idea of repeatedly applying `A` and normalizing by the largest-magnitude component. The returned eigenvalue is computed by Rayleigh quotient and checked with residual `||Av - lambda v||_inf`.
+
+The inverse power method applies shifted solves with `solve_dense_partial_pivot`; it does not keep the old no-pivot LU path. Singular shifted systems return `EigenStatus::singular_shift`.
+
+These are dense 0.x reference algorithms, not a full eigensolver package. Repeated or clustered eigenvalues can converge slowly and may return `not_converged`.
 
 ## Symmetric Skyline and SPD LDLT
 

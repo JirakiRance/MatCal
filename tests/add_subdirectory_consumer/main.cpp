@@ -2,6 +2,8 @@
 
 #include "Insert.hpp"
 #include "MatCal/Calculus/Calculus.hpp"
+#include "MatCal/Linalg/EigenSolvers.hpp"
+#include "MatCal/Linalg/IterativeSolvers.hpp"
 #include "MatCal/Interpolation/LinearInterpolator.hpp"
 #include "MatCal/Interpolation/PolynomialInterpolation.hpp"
 #include "MatCal/LeastSquares/LeastSquares.hpp"
@@ -41,6 +43,18 @@ int main() {
     auto fit = MatCal::LeastSquares::fit_polynomial_degree(1, {0.0, 1.0}, {1.0, 3.0});
     if (!fit.success()) {
         return 9;
+    }
+
+    auto iterative = MatCal::Linalg::solve_gauss_seidel(
+        MatCal::Linalg::DenseMatrix{{4.0, 1.0}, {2.0, 3.0}},
+        MatCal::Linalg::Vector{1.0, 2.0});
+    if (!iterative.success()) {
+        return 10;
+    }
+
+    auto eigen = MatCal::Linalg::dominant_eigenpair(MatCal::Linalg::DenseMatrix::identity(1));
+    if (!eigen.success()) {
+        return 11;
     }
 
     MatCal::Polynomial::Polynomial p{1.0, 2.0};

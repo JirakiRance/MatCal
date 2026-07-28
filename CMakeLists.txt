@@ -232,6 +232,10 @@ if(BUILD_TESTING)
         tests/legacy_sor_regression_tests.cpp
     )
 
+    matcal_add_legacy_test(matcal_legacy_matrix_linalg_adapter_tests
+        tests/legacy_matrix_linalg_adapter_tests.cpp
+    )
+
     function(matcal_add_linalg_test target_name)
         add_executable(${target_name} ${ARGN})
         target_link_libraries(${target_name} PRIVATE MatCal::Linalg)
@@ -470,6 +474,14 @@ if(BUILD_TESTING)
         tests/linalg/scale_contract_tests.cpp
     )
 
+    matcal_add_linalg_test(matcal_linalg_iterative_solver_tests
+        tests/linalg/iterative_solver_tests.cpp
+    )
+
+    matcal_add_linalg_test(matcal_linalg_eigen_solver_tests
+        tests/linalg/eigen_solver_tests.cpp
+    )
+
     matcal_add_linalg_test(matcal_linalg_skyline_matrix_tests
         tests/linalg/skyline_matrix_tests.cpp
     )
@@ -488,6 +500,8 @@ if(BUILD_TESTING)
         tests/linalg/header_dense_matrix_self_contained.cpp
         tests/linalg/header_solver_types_self_contained.cpp
         tests/linalg/header_dense_solver_self_contained.cpp
+        tests/linalg/header_iterative_solvers_self_contained.cpp
+        tests/linalg/header_eigen_solvers_self_contained.cpp
         tests/linalg/header_symmetric_skyline_self_contained.cpp
         tests/linalg/header_skyline_ldlt_self_contained.cpp
     )
@@ -497,6 +511,7 @@ if(BUILD_TESTING)
         tests/linalg/multi_tu_a.cpp
         tests/linalg/multi_tu_b.cpp
         tests/linalg/multi_tu_skyline.cpp
+        tests/linalg/multi_tu_iterative_eigen.cpp
     )
 
     add_executable(matcal_multi_tu_link_tests

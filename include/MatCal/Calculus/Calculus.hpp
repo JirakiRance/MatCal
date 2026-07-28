@@ -62,6 +62,17 @@ struct DerivativeResult {
     }
 };
 
+struct GradientResult {
+    std::vector<double> values;
+    double step = 0.0;
+    int function_evaluations = 0;
+    CalculusDiagnostic diagnostic;
+
+    bool success() const noexcept {
+        return diagnostic.status == CalculusStatus::success;
+    }
+};
+
 struct IntegrationOptions {
     double tolerance = 1.0e-10;
     int max_iterations = 20;
@@ -99,6 +110,7 @@ struct IntegrationResult {
 };
 
 using Function = std::function<double(double)>;
+using MultivariateFunction = std::function<double(const std::vector<double>&)>;
 
 namespace detail {
 
@@ -264,6 +276,77 @@ inline DerivativeResult central_difference(const Function& f, double x, double s
                                      CalculusPhase::evaluation, "central difference produced a non-finite value")};
     }
     return {value, step, evaluations, detail::success_diag()};
+}
+
+inline DerivativeResult partial_difference(const MultivariateFunction& f,
+                                           const std::vector<double>& x,
+                                           std::size_t coordinate,
+                                           double step = 1.0e-6) {
+    if (!f) return detail::derivative_failure(CalculusStatus::invalid_input, CalculusReason::invalid_callable, "partial derivative function is empty", step);
+    if (x.empty() || coordinate >= x.size()) return detail::derivative_failure(CalculusStatus::invalid_input, CalculusReason::non_finite_input, "partial derivative coordinate is out of range", step);
+    if (!detail::finite(step) || step <= 0.0) return detail::derivative_failure(CalculusStatus::invalid_input, CalculusReason::invalid_step, "partial derivative step must be finite and positive", step);
+    for (double value : x) {
+        if (!detail::finite(value)) return detail::derivative_failure(CalculusStatus::invalid_input, CalculusReason::non_finite_input, "partial derivative point is not finite", step);
+    }
+
+    std::vector<double> shifted = x;
+    shifted[coordinate] += step;
+    if (!detail::finite(shifted[coordinate])) {
+        return detail::derivative_failure(CalculusStatus::invalid_input, CalculusReason::non_finite_input, "partial derivative shifted coordinate is not finite", step);
+    }
+
+    int evaluations = 0;
+    const double right = f(shifted);
+    ++evaluations;
+    if (!detail::finite(right)) {
+        return {detail::nan(), step, evaluations,
+                detail::failure_diag(CalculusStatus::non_finite, CalculusReason::non_finite_function_value,
+                                     CalculusPhase::evaluation, "partial derivative function returned a non-finite shifted value")};
+    }
+    const double left = f(x);
+    ++evaluations;
+    if (!detail::finite(left)) {
+        return {detail::nan(), step, evaluations,
+                detail::failure_diag(CalculusStatus::non_finite, CalculusReason::non_finite_function_value,
+                                     CalculusPhase::evaluation, "partial derivative function returned a non-finite base value")};
+    }
+    const double value = (right - left) / step;
+    if (!detail::finite(value)) {
+        return {detail::nan(), step, evaluations,
+                detail::failure_diag(CalculusStatus::non_finite, CalculusReason::non_finite_result,
+                                     CalculusPhase::evaluation, "partial derivative produced a non-finite value")};
+    }
+    return {value, step, evaluations, detail::success_diag()};
+}
+
+inline GradientResult gradient(const MultivariateFunction& f,
+                               const std::vector<double>& x,
+                               double step = 1.0e-6) {
+    GradientResult result;
+    result.step = step;
+    if (!f) {
+        result.diagnostic = detail::failure_diag(CalculusStatus::invalid_input, CalculusReason::invalid_callable,
+                                                 CalculusPhase::setup, "gradient function is empty");
+        return result;
+    }
+    if (x.empty()) {
+        result.diagnostic = detail::failure_diag(CalculusStatus::invalid_input, CalculusReason::non_finite_input,
+                                                 CalculusPhase::setup, "gradient point must not be empty");
+        return result;
+    }
+    result.values.resize(x.size());
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        auto partial = partial_difference(f, x, i, step);
+        result.function_evaluations += partial.function_evaluations;
+        if (!partial.success()) {
+            result.values.clear();
+            result.diagnostic = partial.diagnostic;
+            return result;
+        }
+        result.values[i] = partial.value;
+    }
+    result.diagnostic = detail::success_diag();
+    return result;
 }
 
 inline IntegrationResult integrate_instant(const Function& f, double a, double b, double step = 1.0e-6) {

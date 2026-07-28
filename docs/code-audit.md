@@ -165,3 +165,32 @@ New targets and tests:
 - Public-header self-contained tests.
 - Multi-translation-unit tests.
 - Nonlinear-only, LeastSquares-only, Interpolation-only, Legacy, PT-style, package, and add-subdirectory consumers.
+
+## M7 Matrix Migration Audit
+
+M7 reviewed the Matrix algorithms in `src/Matrix.hpp` before changing migrated paths.
+
+Reused legacy formulas and loops:
+
+- `Jacobi`: old-iterate stationary update over every component.
+- `Gauss_Seidel`: lower entries from the current sweep, upper entries from the previous sweep.
+- `SOR`: corrected relaxed Gauss-Seidel update already established in M0.1.
+- `PowerMethod`: repeated matrix-vector products with vector normalization.
+- `PowerMethod_reverse`: inverse iteration idea near a caller-provided shift, now using the dense partial-pivot solver instead of no-pivot legacy LU.
+- `Derivative::pF_px` and `Derivative::dF_dx`: forward finite-difference partial derivative formula.
+
+M7 repairs:
+
+- Legacy Matrix-to-Linalg conversion now has one deep-copy adapter layer and does not rely on `dynamic_cast` to guess concrete matrix types.
+- Legacy `solve_columnElimination` no longer owns a separate Gaussian-elimination implementation path; it delegates to `solve_dense_partial_pivot`.
+- Stationary iterative solvers reject non-finite input, invalid omega, near-zero diagonals, dimension mismatches, and non-convergence with structured `SolverResult` state.
+- Power and inverse-power solvers reject invalid initial vectors, non-finite values, singular shifted systems, and non-convergence without reporting pseudo success.
+- Multivariable derivative helpers no longer mutate the caller-provided point while estimating partial derivatives.
+
+New coverage:
+
+- Legacy/Linalg adapter tests.
+- Dense Jacobi, Gauss-Seidel, and SOR convergence, scale, and failure tests.
+- Dense power and inverse-power eigen residual tests.
+- Legacy/new differential tests for Matrix solvers, eigen solvers, and multivariable derivative helpers.
+- Public-header self-contained and multi-translation-unit coverage for the new Linalg headers.

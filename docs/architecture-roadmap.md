@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation. M7 migrates legacy Matrix direct, stationary iterative, eigen, and multivariable derivative helper paths.
 
 ## Current Shape
 
@@ -57,7 +57,7 @@ Do not describe `MatCal::Linalg` as ABI-stable or production-ready.
 7. Replace stdout from core paths with structured status or caller-provided diagnostics.
 8. Expand scale-aware tolerance helpers only when algorithms need them.
 9. Forward legacy APIs to new internals one family at a time, behind compatibility tests.
-10. Add CSR and iterative solver infrastructure after dense and skyline behavior is stable.
+10. Add CSR and advanced sparse iterative solver infrastructure after dense, skyline, and dense stationary behavior is stable.
 
 ## M1 Baseline
 
@@ -116,6 +116,15 @@ M6 adds:
 - Legacy delegation for `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite`.
 - CMake export and consumer checks for `MatCal::Nonlinear` and `MatCal::LeastSquares`.
 
+M7 adds:
+
+- Legacy/Linalg deep-copy conversion adapters owned on the Legacy side.
+- `MatCal::Linalg::solve_jacobi`, `solve_gauss_seidel`, and `solve_sor`.
+- `MatCal::Linalg::dominant_eigenpair` and `inverse_power_eigenpair`.
+- Legacy delegation for `solve_columnElimination`, `Jacobi`, `Gauss_Seidel`, `SOR`, `PowerMethod`, and `PowerMethod_reverse`.
+- `MatCal::Calculus::partial_difference` and `gradient`.
+- Legacy delegation for `Derivative::pF_px` and `Derivative::dF_dx`.
+
 ## Future Capabilities
 
 The architecture should eventually support:
@@ -125,7 +134,7 @@ The architecture should eventually support:
 - `SymmetricSkylineMatrix`
 - `LDLT`
 - `CSR`
-- Iterative solvers
+- Advanced sparse/preconditioned iterative solvers
 
 These are roadmap items, not M0 implementations.
 

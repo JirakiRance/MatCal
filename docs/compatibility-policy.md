@@ -107,6 +107,18 @@ M6 continues the compatibility-facade strategy for multivariable nonlinear solve
 - New interpolation validation rejects duplicate and non-finite nodes instead of allowing denominator-zero or NaN propagation.
 - Source consumers should recompile to pick up M6 header-only changes. ABI stability and compatibility with old precompiled binaries are still not promised.
 
+## M7 Legacy Migration Policy
+
+M7 continues the compatibility-facade strategy for legacy Matrix algorithms and multivariable derivative helpers.
+
+- Legacy/Linalg conversion adapters live on the Legacy side. `MatCal::Linalg` still does not depend on legacy `AbstractMatrix` or `Matrix`.
+- `solve_columnElimination` keeps its legacy signature and `std::unique_ptr<AbstractMatrix>` result. It now delegates to `solve_dense_partial_pivot` and maps numerical failure to legacy exceptions.
+- `Jacobi`, `Gauss_Seidel`, and `SOR` keep their legacy signatures, result struct, defaults, and the legacy `int omega` overload. They now delegate to `MatCal::Linalg` stationary solvers.
+- `PowerMethod` and `PowerMethod_reverse` keep their legacy signatures and result struct. They now delegate to `dominant_eigenpair` and shifted `inverse_power_eigenpair`.
+- `Derivative::pF_px` and `Derivative::dF_dx` keep their public signatures while delegating to `MatCal::Calculus` partial derivative and gradient helpers.
+- The new Linalg iterative/eigen functions are 0.x source APIs under the existing `MatCal::Linalg` target. They are not ABI-stable.
+- Source consumers should recompile to pick up M7 header-only changes. ABI stability and compatibility with old precompiled binaries are still not promised.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

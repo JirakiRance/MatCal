@@ -37,6 +37,7 @@ SFL -> MatCal
 - General scalar differentiation, quadrature, and ODE stepping over value-owned vectors.
 - General multivariable nonlinear solving for numeric vectors.
 - General polynomial least-squares fitting.
+- General dense stationary iterative linear solves and dense power eigen solves.
 
 ## M1 Boundary
 
@@ -61,6 +62,8 @@ M2.1 freezes the generic capabilities needed for a later integration stage:
 M5 keeps calculus and ODE boundaries equally generic. `MatCal::ODE` accepts only numeric time, numeric state vectors, and numeric RHS callables. It does not accept PT mechanism types, SFL AST nodes, FEM element connectivity, materials, loads, constraints, stress recovery requests, CAE IR, diagnostics, or Result IR.
 
 M6 keeps nonlinear and least-squares boundaries generic. `MatCal::Nonlinear` accepts numeric vectors, residual callables, optional Jacobian callables, and numeric options. `MatCal::LeastSquares` accepts numeric samples, weights, and polynomial term selections. Neither target accepts SFL AST, FEM element connectivity, constraints, mesh ownership, materials, loads, source diagnostics, CAE IR, or Result IR.
+
+M7 keeps Matrix modernization generic. Legacy adapters convert only between legacy Matrix storage and `MatCal::Linalg` value types. Stationary iterative solvers and power eigen solvers accept only dense numeric matrices, vectors, numeric options, and numeric initial guesses. They do not accept SFL degrees of freedom, element connectivity, mesh constraints, materials, loads, source diagnostics, CAE IR, or Result IR.
 
 ## SFL Keeps
 

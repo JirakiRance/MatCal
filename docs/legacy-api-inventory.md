@@ -100,6 +100,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - Iterative solvers: `Iteration_Result`, `Jacobi`, `Gauss_Seidel`, `SOR(AbstractMatrix&,AbstractMatrix&,double omega,double epsilon = 1e-6,int max_iterations = 100)`, legacy `SOR(AbstractMatrix&,AbstractMatrix&,int omega,double epsilon = 1e-6,int max_iterations = 100)`.
 - Eigen solvers: `PowerMethod_Result`, `PowerMethod`, `PowerMethod_reverse`.
 - Input mutation: signatures use non-const references. Some functions copy internally and do not mutate input; elementary transformations do mutate input.
+- M7 note: `solve_columnElimination`, `Jacobi`, `Gauss_Seidel`, `SOR`, `PowerMethod`, and `PowerMethod_reverse` keep their legacy signatures while delegating through Legacy-owned adapters to `MatCal::Linalg`.
 
 ## `MatCal::Algorithm::Insert`
 
@@ -130,7 +131,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - `NumericalIntegration`: `Instant`, `NewtonCotes`, `CompositeNewtonCotes`, `Romberg`, overloads for discrete data, `CotesSheet`.
 - `ODE`: `SimpleEuler`, `Euler`, `RungeKutta_44`.
 - `Integrate::RK4`: `step`, `step2`; this area is explicitly marked in source as PT-specific legacy support.
-- M6 note: `Least_Square::solve` overloads now delegate to `MatCal::LeastSquares`. Multivariable derivative helpers `pF_px` and `dF_dx` remain legacy-only.
+- M7 note: `Least_Square::solve` overloads delegate to `MatCal::LeastSquares`; `Derivative::pF_px` and `Derivative::dF_dx` delegate to `MatCal::Calculus`.
 
 ## Possible PT/External Dependency Surface
 
@@ -213,6 +214,27 @@ std::pair<OdeStepResult, std::vector<double>> improved_euler_step(Rhs rhs, doubl
 OdeStepResult rk4_step(Rhs rhs, double t, const std::vector<double>& state, double dt, const OdeOptions& options = {});
 OdeTrajectoryResult integrate_euler(Rhs rhs, double t0, const std::vector<double>& state0, double dt, std::size_t count, const OdeOptions& options = {});
 OdeTrajectoryResult integrate_rk4(Rhs rhs, double t0, const std::vector<double>& state0, double dt, std::size_t count, const OdeOptions& options = {});
+```
+
+M7 extends existing 0.x targets while preserving the legacy signatures above:
+
+```cpp
+// MatCal::Linalg
+SolverResult solve_jacobi(const DenseMatrix& A, const Vector& b, const SolverOptions& options = {});
+SolverResult solve_jacobi(const DenseMatrix& A, const Vector& b, const Vector& initial_guess, const SolverOptions& options = {});
+SolverResult solve_gauss_seidel(const DenseMatrix& A, const Vector& b, const SolverOptions& options = {});
+SolverResult solve_gauss_seidel(const DenseMatrix& A, const Vector& b, const Vector& initial_guess, const SolverOptions& options = {});
+SolverResult solve_sor(const DenseMatrix& A, const Vector& b, double omega, const SolverOptions& options = {});
+SolverResult solve_sor(const DenseMatrix& A, const Vector& b, const Vector& initial_guess, double omega, const SolverOptions& options = {});
+
+EigenResult dominant_eigenpair(const DenseMatrix& A, const EigenOptions& options = {});
+EigenResult dominant_eigenpair(const DenseMatrix& A, const Vector& initial_vector, const EigenOptions& options = {});
+EigenResult inverse_power_eigenpair(const DenseMatrix& A, const EigenOptions& options = {});
+EigenResult inverse_power_eigenpair(const DenseMatrix& A, const Vector& initial_vector, const EigenOptions& options = {});
+
+// MatCal::Calculus
+DerivativeResult partial_difference(const MultivariateFunction& f, const std::vector<double>& x, std::size_t coordinate, double step = 1e-6);
+GradientResult gradient(const MultivariateFunction& f, const std::vector<double>& x, double step = 1e-6);
 ```
 
 ### Iteration

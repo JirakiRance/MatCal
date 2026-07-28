@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. M6 adds multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation contracts. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. M6 adds multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation contracts. M7 adds dense stationary iterative linear solvers, dense power eigen solvers, and multivariable finite-difference derivative helpers. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -196,3 +196,41 @@ Step convergence is accepted only together with residual acceptance. Singular Ja
 Inputs require matching finite `x`, `y`, and weight vectors. Weights must be strictly positive in the M6 core. Selected degree lists must be non-empty and non-negative.
 
 Rank-deficient normal equations return `LeastSquaresStatus::rank_deficient`. Overflow while building powers, normal equations, or the right-hand side returns `breakdown`. Successful results include coefficients, selected degrees, the fitted polynomial, normal matrix, right-hand side, sample count, term count, and infinity residual over the samples.
+
+## M7 Stationary Iterative Solver Contract
+
+`solve_jacobi`, `solve_gauss_seidel`, and `solve_sor` operate on `MatCal::Linalg::DenseMatrix` and `Vector`. They reuse the legacy stationary update formulas, with SOR using the corrected relaxed Gauss-Seidel update:
+
+```text
+x_new[i] = omega * gs_value[i] + (1 - omega) * x_old[i]
+```
+
+Inputs must be square, dimension-compatible, finite, and have finite diagonal entries above the diagonal tolerance:
+
+```text
+pivot_factor * max(absolute_tolerance, relative_tolerance * matrix_scale)
+```
+
+`omega` must be finite and satisfy `0 < omega < 2`. Success requires both a finite iterate and residual acceptance under the existing linalg residual contract. `not_converged` returns no partial solution in the core result. Metrics record iterations, operation count, matrix/RHS/solution scale, pivot tolerance, minimum diagonal magnitude, and absolute/relative residuals.
+
+## M7 Dense Power Eigen Contract
+
+`dominant_eigenpair` and `inverse_power_eigenpair` are dense reference algorithms in `MatCal::Linalg`. They are not sparse eigensolvers and do not claim robust behavior for clustered, repeated, or defective spectra.
+
+Power iteration normalizes by the largest-magnitude vector component, computes the eigenvalue by Rayleigh quotient, and accepts convergence only when the eigen residual is finite and satisfies:
+
+```text
+||A v - lambda v||_inf <= max(abs_tol, rel_tol * max(matrix_scale * vector_scale, |lambda| * vector_scale, 1))
+```
+
+Inverse power applies shifted solves with `solve_dense_partial_pivot(A - shift I, rhs)`. Singular shifted systems return `EigenStatus::singular_shift`; non-finite products, quotients, or solve intermediates return `breakdown`. Failures do not return a pseudo-success eigenpair.
+
+## M7 Multivariable Derivative Contract
+
+`MatCal::Calculus::partial_difference` and `gradient` reuse the legacy forward finite-difference formula:
+
+```text
+partial_i F(x) = (F(x + h e_i) - F(x)) / h
+```
+
+The helpers require a non-empty callable, finite owned input state, an in-range coordinate, and finite positive step. They do not mutate caller state. They return structured derivative results with evaluation counts and reject non-finite function values instead of propagating them silently.

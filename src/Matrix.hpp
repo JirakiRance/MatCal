@@ -22,6 +22,13 @@
 #include<tuple>
 #include<cmath>
 #include<typeinfo>
+#include<functional>
+
+#include "MatCal/Linalg/DenseMatrix.hpp"
+#include "MatCal/Linalg/DenseSolver.hpp"
+#include "MatCal/Linalg/EigenSolvers.hpp"
+#include "MatCal/Linalg/IterativeSolvers.hpp"
+#include "MatCal/Linalg/Vector.hpp"
 
 namespace MatCal{
     namespace Utils{
@@ -1310,6 +1317,81 @@ inline std::unique_ptr<UpperTriangularMatrix> LowerTriangularMatrix::transpose()
     return result; // 移出后不需要 std::move
 }
 }
+
+namespace MatCal::Legacy {
+
+inline std::size_t checked_legacy_extent(int value, const char* name) {
+    if (value < 0) {
+        throw std::invalid_argument(std::string(name) + " must be non-negative");
+    }
+    return static_cast<std::size_t>(value);
+}
+
+inline MatCal::Linalg::DenseMatrix to_linalg_dense(const MatCal::Utils::AbstractMatrix& matrix) {
+    const std::size_t rows = checked_legacy_extent(matrix.getRows(), "legacy matrix rows");
+    const std::size_t cols = checked_legacy_extent(matrix.getCols(), "legacy matrix cols");
+    MatCal::Linalg::DenseMatrix result(rows, cols);
+    for (std::size_t r = 0; r < rows; ++r) {
+        for (std::size_t c = 0; c < cols; ++c) {
+            const double value = matrix.get(static_cast<int>(r), static_cast<int>(c));
+            if (!std::isfinite(value)) {
+                throw std::invalid_argument("legacy matrix contains a non-finite value");
+            }
+            result(r, c) = value;
+        }
+    }
+    return result;
+}
+
+inline MatCal::Linalg::Vector to_linalg_column_vector(const MatCal::Utils::AbstractMatrix& matrix) {
+    if (matrix.getCols() != 1) {
+        throw std::invalid_argument("legacy matrix must be a single column vector");
+    }
+    const std::size_t rows = checked_legacy_extent(matrix.getRows(), "legacy vector rows");
+    MatCal::Linalg::Vector result(rows);
+    for (std::size_t r = 0; r < rows; ++r) {
+        const double value = matrix.get(static_cast<int>(r), 0);
+        if (!std::isfinite(value)) {
+            throw std::invalid_argument("legacy vector contains a non-finite value");
+        }
+        result[r] = value;
+    }
+    return result;
+}
+
+inline MatCal::Utils::Matrix to_legacy_matrix(const MatCal::Linalg::DenseMatrix& matrix) {
+    if (matrix.rows() > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+        matrix.cols() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        throw std::length_error("linalg matrix dimensions exceed legacy int range");
+    }
+    MatCal::Utils::Matrix result(static_cast<int>(matrix.rows()), static_cast<int>(matrix.cols()));
+    for (std::size_t r = 0; r < matrix.rows(); ++r) {
+        for (std::size_t c = 0; c < matrix.cols(); ++c) {
+            if (!std::isfinite(matrix(r, c))) {
+                throw std::invalid_argument("linalg matrix contains a non-finite value");
+            }
+            result.set(static_cast<int>(r), static_cast<int>(c), matrix(r, c));
+        }
+    }
+    return result;
+}
+
+inline MatCal::Utils::Matrix to_legacy_column_matrix(const MatCal::Linalg::Vector& vector) {
+    if (vector.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        throw std::length_error("linalg vector dimension exceeds legacy int range");
+    }
+    MatCal::Utils::Matrix result(static_cast<int>(vector.size()), 1);
+    for (std::size_t i = 0; i < vector.size(); ++i) {
+        if (!std::isfinite(vector[i])) {
+            throw std::invalid_argument("linalg vector contains a non-finite value");
+        }
+        result.set(static_cast<int>(i), 0, vector[i]);
+    }
+    return result;
+}
+
+} // namespace MatCal::Legacy
+
 namespace MatCal::Algorithm::Matrix{
     using Utils::AbstractMatrix;
     using Utils::Matrix;
@@ -1586,32 +1668,29 @@ namespace MatCal::Algorithm::Matrix{
     //列主元消去法求解Ax=b
     //列主元解一次方程(支持一次多组求解),求解交给上三角矩阵来做，所以不会除以对角元素
     inline std::unique_ptr<AbstractMatrix> solve_columnElimination(AbstractMatrix& A,AbstractMatrix& b){
-        //一共rows轮次
-        int rows=A.getRows();
-        int col_a=A.getCols();
-        int col_b=b.getCols();
-        auto A_copy=A.toNormalMatrix();
-        auto b_copy=b.toNormalMatrix();
-        for(int i=0;i<rows;++i){
-            //每一轮选取col==row的列，在row>=i区域进行行初等变换
-            int index=i;
-            for(int j=i;j<rows;++j)
-                if(std::abs(A_copy->get(j, i))>std::abs(A_copy->get(index, i)))
-                    index=j;
-            swapRows(*A_copy,index,i);
-            swapRows(*b_copy,index,i);
-            //高斯消元
-            for(int j = i + 1; j < rows; ++j){  //从当前行之后的所有行
-                double factor = A_copy->get(j, i) / A_copy->get(i, i);
-                for (int k = i; k < col_a; ++k)
-                    A_copy->set(j,k,A_copy->get(j,k)-factor*A_copy->get(i, k));   //更新矩阵 A
-                for(int cb=0;cb<col_b;++cb)
-                    b_copy->set(j,cb,b_copy->get(j,cb)-factor*b_copy->get(i,cb)); //更新向量 b
+        auto dense = MatCal::Legacy::to_linalg_dense(A);
+        if(b.getRows() != A.getRows())
+            throw std::invalid_argument("Right-hand side size does not match matrix rows");
+        if(b.getCols() < 0)
+            throw std::invalid_argument("Right-hand side cols must be non-negative");
+        MatCal::Utils::Matrix result(A.getRows(), b.getCols());
+        for(int col = 0; col < b.getCols(); ++col){
+            MatCal::Utils::Matrix rhs_column(b.getRows(), 1);
+            for(int row = 0; row < b.getRows(); ++row)
+                rhs_column.set(row, 0, b.get(row, col));
+            auto rhs = MatCal::Legacy::to_linalg_column_vector(rhs_column);
+            auto solved = MatCal::Linalg::solve_dense_partial_pivot(dense, rhs);
+            if(!solved.success()){
+                std::string message = "column elimination failed: ";
+                message += MatCal::Linalg::to_string(solved.status);
+                if(!solved.diagnostics.empty())
+                    message += " (" + solved.diagnostics.front().reason + ")";
+                throw std::runtime_error(message);
             }
+            for(int row = 0; row < result.getRows(); ++row)
+                result.set(row, col, solved.solution[static_cast<std::size_t>(row)]);
         }
-        auto dense = dynamic_cast<Matrix*>(A_copy.get());
-        MatCal::Utils::UpperTriangularMatrix U(*dense);
-        return U.solve(*b_copy);
+        return std::make_unique<Matrix>(result);
     }
 
     //列主元解多次方程，返回的是变换后的上三角矩阵和初等变换的记录,不会对A变换（如果要变换，请applyRowSwaps）
@@ -1741,143 +1820,81 @@ namespace MatCal::Algorithm::Matrix{
         double error;       //最终误差,默认采用一范数（每一列都要成立）
         bool converged;     //是否收敛
     };
+    using StationarySolver = MatCal::Linalg::SolverResult (*)(const MatCal::Linalg::DenseMatrix&,
+                                                             const MatCal::Linalg::Vector&,
+                                                             const MatCal::Linalg::SolverOptions&);
+
+    inline Iteration_Result map_stationary_result(AbstractMatrix& A,
+                                                  AbstractMatrix& b,
+                                                  double epsilon,
+                                                  int max_iterations,
+                                                  const std::function<MatCal::Linalg::SolverResult(
+                                                      const MatCal::Linalg::DenseMatrix&,
+                                                      const MatCal::Linalg::Vector&,
+                                                      const MatCal::Linalg::SolverOptions&)>& solver) {
+        if(max_iterations <= 0)
+            throw std::invalid_argument("max_iterations must > 0");
+        if(!std::isfinite(epsilon) || epsilon < 0.0)
+            throw std::invalid_argument("epsilon must be finite and >= 0");
+        auto dense = MatCal::Legacy::to_linalg_dense(A);
+        if(b.getRows() != A.getRows())
+            throw std::invalid_argument("Right-hand side size does not match matrix rows");
+        if(b.getCols() < 0)
+            throw std::invalid_argument("Right-hand side cols must be non-negative");
+
+        MatCal::Linalg::SolverOptions options;
+        options.absolute_tolerance = 0.0;
+        options.relative_tolerance = epsilon;
+        options.max_iterations = static_cast<std::size_t>(max_iterations);
+
+        Matrix root(A.getRows(), b.getCols());
+        Iteration_Result mapped{root, 0, 0.0, true};
+        for(int col = 0; col < b.getCols(); ++col){
+            Matrix rhs_column(b.getRows(), 1);
+            for(int row = 0; row < b.getRows(); ++row)
+                rhs_column.set(row, 0, b.get(row, col));
+            auto rhs = MatCal::Legacy::to_linalg_column_vector(rhs_column);
+            auto result = solver(dense, rhs, options);
+            mapped.iterations = std::max(mapped.iterations, static_cast<int>(result.metrics.iterations));
+            mapped.error = std::max(mapped.error, result.metrics.absolute_residual_norm);
+            if(!result.success()){
+                if(result.status == MatCal::Linalg::SolverStatus::not_converged){
+                    mapped.converged = false;
+                    mapped.error = -1.0;
+                    mapped.root = root;
+                    return mapped;
+                }
+                std::string message = "legacy stationary solver failed: ";
+                message += MatCal::Linalg::to_string(result.status);
+                if(!result.diagnostics.empty())
+                    message += " (" + result.diagnostics.front().reason + ")";
+                throw std::runtime_error(message);
+            }
+            for(int row = 0; row < root.getRows(); ++row)
+                root.set(row, col, result.solution[static_cast<std::size_t>(row)]);
+        }
+        mapped.root = root;
+        return mapped;
+    }
+
     //Jacobi法
     inline Iteration_Result Jacobi(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
-        //转换为普通矩阵
-        auto converted_A = A.toNormalMatrix();
-        auto converted_b = b.toNormalMatrix();
-        auto dense_A = dynamic_cast<Matrix*>(converted_A.get());
-        auto dense_b = dynamic_cast<Matrix*>(converted_b.get());
-        if (!dense_A||!dense_b)
-            throw std::runtime_error("Failed to convert matrices to dense format");
-        
-        int n = dense_A->getRows();
-        int sets=dense_b->getCols();
-        //提取对角矩阵D
-        auto D = std::make_unique<Matrix>(n, n);
-        for(int i = 0; i < n; ++i)
-            D->set(i,i,dense_A->get(i,i));
-        
-        //构造L+U (A = D + L + U, 所以 L+U = A - D)
-        auto LU = std::make_unique<Matrix>(n, n);
-        for (int i = 0; i < n; ++i){
-            for(int j = 0; j < n; ++j){
-                if(i == j){
-                    LU->set(i,j,0.0);
-                }else{
-                    LU->set(i,j, dense_A->get(i, j));
-                }
-            }
-        }
-        
-        //计算迭代矩阵 J = -D^(-1)(L+U)  以及g=D^(-1)b
-        auto J = std::make_unique<Matrix>(n,n);
-        auto g = std::make_unique<Matrix>(n,sets);
-        for(int i = 0; i < n; ++i){
-            double diag_val = D->get(i, i);
-            if(std::abs(diag_val) < 1e-12)
-                throw std::runtime_error("Zero diagonal element found, Jacobi method fails");
-            for(int j = 0; j < n; ++j){
-                J->set(i, j, -LU->get(i, j) / diag_val);
-            }
-            for(int k=0;k<sets;++k)
-                g->set(i,k, dense_b->get(i,k) / diag_val);
-        }
-
-        //初始化迭代
-        auto x = std::make_unique<Matrix>(n, sets);  // 初始解向量，全零
-        Iteration_Result result;
-
-        //Jacobi迭代: x^(k+1) = J * x^(k) + g
-        for(int iteration=1;iteration<=max_iterations;++iteration){
-            //将AbstractMatrix转换为Matrix
-            auto x_new_abstract = J->multiply(*x)->add(*g);
-            auto x_new_matrix = dynamic_cast<Matrix*>(x_new_abstract.get());
-            if (!x_new_matrix)
-                throw std::runtime_error("Matrix operation returned unexpected type");
-            auto x_new = std::make_unique<Matrix>(*x_new_matrix);
-            //计算误差（一范数：每一列的最大绝对误差）
-            auto delta_x=x_new->add(*(x->scalarMultiply(-1)));
-            double eps=norm_one(*delta_x);
-            //更新解
-            *x=*x_new;
-            //检查收敛
-            if(eps < epsilon){
-                result.converged=true;
-                result.iterations=iteration;
-                result.error=eps;
-                result.root=*x;
-                return result;
-            }
-        }
-        //未收敛
-        result.converged=false;
-        result.iterations=max_iterations;
-        result.error=-1;//表示未收敛
-        result.root=*x;
-        return result;
+        return map_stationary_result(A, b, epsilon, max_iterations,
+            [](const MatCal::Linalg::DenseMatrix& dense,
+               const MatCal::Linalg::Vector& rhs,
+               const MatCal::Linalg::SolverOptions& options) {
+                return MatCal::Linalg::solve_jacobi(dense, rhs, options);
+            });
     }
 
     //Gauss-Seidel(不使用矩阵方法了，因为求矩阵的逆不好求且不稳定，与其求逆不如直接对A求逆)
     inline Iteration_Result Gauss_Seidel(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
-        //转换为普通矩阵
-        auto converted_A = A.toNormalMatrix();
-        auto converted_b = b.toNormalMatrix();
-        auto dense_A = dynamic_cast<Matrix*>(converted_A.get());
-        auto dense_b = dynamic_cast<Matrix*>(converted_b.get());
-        if (!dense_A||!dense_b)
-            throw std::runtime_error("Failed to convert matrices to dense format");
-        
-        int n = dense_A->getRows();
-        int sets=dense_b->getCols();
-       
-        //初始化迭代
-        auto x = std::make_unique<Matrix>(n, sets);
-        Iteration_Result result;
-
-        //开始迭代
-        for(int iteration=1;iteration<=max_iterations;++iteration){
-            auto x_new=std::make_unique<Matrix>(*x);
-            //每一组解
-            for(int k=0;k<sets;++k){
-                //每个方程
-               for(int i=0;i<n;++i){
-                    double sum = 0.0;
-                    for(int j=0;j<i;++j)
-                        sum += dense_A->get(i,j)*x_new->get(j,k);
-                    for(int j=i+1;j<n;++j)
-                        sum += dense_A->get(i,j)*x->get(j,k);
-                    double diag_val = dense_A->get(i,i);
-                    if(std::abs(diag_val)<1e-12)
-                        throw std::runtime_error("Zero diagonal element found, Gauss-Seidel method fails");
-                    double new_val=(dense_b->get(i,k)-sum)/diag_val;
-                    x_new->set(i,k, new_val);
-                }//for i
-            }//for k
-            //计算误差
-            auto delta_x_abstract = x->add(*(x_new->scalarMultiply(-1)));
-            auto delta_x_ptr = dynamic_cast<Matrix*>(delta_x_abstract.get());
-            if (!delta_x_ptr)
-                throw std::runtime_error("Matrix operation returned unexpected type");
-            double eps = norm_one(*delta_x_ptr);
-            //更新解
-            *x=*x_new;
-            //检查收敛
-            if(eps < epsilon) {
-                result.converged = true;
-                result.iterations = iteration;
-                result.error = eps;
-                result.root = *x;
-                return result;
-            }
-
-        }//for iteration
-        // 未收敛
-        result.converged = false;
-        result.iterations = max_iterations;
-        result.error = -1;
-        result.root = *x;
-        return result;
+        return map_stationary_result(A, b, epsilon, max_iterations,
+            [](const MatCal::Linalg::DenseMatrix& dense,
+               const MatCal::Linalg::Vector& rhs,
+               const MatCal::Linalg::SolverOptions& options) {
+                return MatCal::Linalg::solve_gauss_seidel(dense, rhs, options);
+            });
     }
 
     //SOR方法，需要传入omega参数，0<omega<2
@@ -1885,67 +1902,12 @@ namespace MatCal::Algorithm::Matrix{
         if (!std::isfinite(omega) || omega >= 2 || omega <= 0) {
             throw std::invalid_argument("omega should be in (0,2) !");
         }
-        
-        //转换为普通矩阵
-        auto converted_A = A.toNormalMatrix();
-        auto converted_b = b.toNormalMatrix();
-        auto dense_A = dynamic_cast<Matrix*>(converted_A.get());
-        auto dense_b = dynamic_cast<Matrix*>(converted_b.get());
-        if (!dense_A || !dense_b)
-            throw std::runtime_error("Failed to convert matrices to dense format");
-
-        int n = dense_A->getRows();
-        int sets = dense_b->getCols();
-
-        //初始化迭代
-        auto x = std::make_unique<Matrix>(n, sets);
-        Iteration_Result result;
-
-        //开始迭代
-        for (int iteration = 1; iteration <= max_iterations; ++iteration) {
-            auto x_new = std::make_unique<Matrix>(*x);
-            //每一组解
-            for (int k = 0; k < sets; ++k) {
-                //每个方程
-                for (int i = 0; i < n; ++i) {
-                    double sum = 0.0;
-                    for (int j = 0; j < i; ++j)
-                        sum += dense_A->get(i, j) * x_new->get(j, k);
-                    for (int j = i + 1; j < n; ++j)
-                        sum += dense_A->get(i, j) * x->get(j, k);
-                    double diag_val = dense_A->get(i, i);
-                    if (std::abs(diag_val) < 1e-12)
-                        throw std::runtime_error("Zero diagonal element found, SOR method fails");
-                    double gauss = (dense_b->get(i, k) - sum) / diag_val;//相对于Gauss,只改了这两行
-                    double new_val = gauss * omega + (1 - omega) * x->get(i, k);
-                    x_new->set(i, k, new_val);
-                }//for i
-            }//for k
-            //计算误差
-            auto delta_x_abstract = x->add(*(x_new->scalarMultiply(-1)));
-            auto delta_x_ptr = dynamic_cast<Matrix*>(delta_x_abstract.get());
-            if (!delta_x_ptr)
-                throw std::runtime_error("Matrix operation returned unexpected type");
-            double eps = norm_one(*delta_x_ptr);
-            //更新解
-            *x = *x_new;
-            //检查收敛
-            if (eps < epsilon) {
-                result.converged = true;
-                result.iterations = iteration;
-                result.error = eps;
-                result.root = *x;
-                return result;
-            }
-
-        }//for iteration
-        // 未收敛
-        result.converged = false;
-        result.iterations = max_iterations;
-        result.error = -1;
-        result.root = *x;
-        return result;
-    
+        return map_stationary_result(A, b, epsilon, max_iterations,
+            [omega](const MatCal::Linalg::DenseMatrix& dense,
+                    const MatCal::Linalg::Vector& rhs,
+                    const MatCal::Linalg::SolverOptions& options) {
+                return MatCal::Linalg::solve_sor(dense, rhs, omega, options);
+            });
     }
 
     inline Iteration_Result SOR(AbstractMatrix& A, AbstractMatrix& b, int omega, double epsilon = 1e-6, int max_iterations = 100) {
@@ -1968,36 +1930,23 @@ namespace MatCal::Algorithm::Matrix{
             throw std::invalid_argument("using power method,matrix should be square!");
         if(A.getCols()==0)
             throw std::invalid_argument("matrix empty!");
-        int n = A.getCols();
-        //std::function<double(AbstractMatrix& vec)>
-        auto _powerMethod_find_mk = [n](AbstractMatrix& vec){
-            double mk = vec.get(0,0);
-            for(int i=0;i<n;++i){
-                if(std::abs(vec.get(i,0)) > std::abs(mk)){
-                    mk = vec.get(i,0);
-                }
-            }
-            return mk;
-        };
-
-        Matrix raw_vec(n,1);
-        for(int i=0;i<n;++i)
-            raw_vec.set(i,0,1);
-        
-        Matrix u = raw_vec;
-        Matrix v = raw_vec;
-        double m = 0;
-        double last_m = 1;
-        int iter = 0;
-        //主循环
-        while(std::abs(m - last_m)>eps && iter < max_iter){
-            last_m = m;
-            v = *A.multiply(u);
-            m = _powerMethod_find_mk(v);
-            u = *v.scalarMultiply(1/m);
-            ++iter;
+        if(max_iter <= 0)
+            throw std::invalid_argument("max_iter must > 0");
+        auto dense = MatCal::Legacy::to_linalg_dense(A);
+        MatCal::Linalg::EigenOptions options;
+        options.absolute_tolerance = eps;
+        options.relative_tolerance = eps;
+        options.max_iterations = static_cast<std::size_t>(max_iter);
+        auto result = MatCal::Linalg::dominant_eigenpair(dense, options);
+        if(!result.success()){
+            std::string message = "PowerMethod failed: ";
+            message += MatCal::Linalg::to_string(result.status);
+            if(!result.diagnostics.empty())
+                message += " (" + result.diagnostics.front().reason + ")";
+            throw std::runtime_error(message);
         }
-        return PowerMethod_Result(m,u,iter);
+        Matrix vec = MatCal::Legacy::to_legacy_column_matrix(result.eigenvector);
+        return PowerMethod_Result(result.eigenvalue, vec, static_cast<int>(result.metrics.iterations));
     }
     //规范化反幂法
     inline PowerMethod_Result PowerMethod_reverse(AbstractMatrix&A,double near_num = 0,double eps = 1e-6,int max_iter = 1000){
@@ -2005,40 +1954,24 @@ namespace MatCal::Algorithm::Matrix{
             throw std::invalid_argument("using power method,matrix should be square!");
         if(A.getCols()==0)
             throw std::invalid_argument("matrix empty!");
-        int n = A.getCols();
-        auto _powerMethod_find_mk = [n](AbstractMatrix& vec){
-            double mk = vec.get(0,0);
-            for(int i=0;i<n;++i){
-                if(std::abs(vec.get(i,0)) > std::abs(mk)){
-                    mk = vec.get(i,0);
-                }
-            }
-            return mk;
-        };
-        
-        Matrix raw_vec(n,1);
-        for(int i=0;i<n;++i)
-            raw_vec.set(i,0,1);
-        
-        Matrix I = Matrix::identity(A.getCols());
-        Matrix B(n,n);
-        B = *(A.add( *I.scalarMultiply(-near_num)));
-        auto lu = LU_Decompose(B);
-
-        Matrix u = raw_vec;
-        Matrix v = raw_vec;
-        double m = 0;
-        double last_m = 1;
-        int iter = 0;
-        //主循环
-        while(std::abs(m - last_m)>eps && iter < max_iter){
-            last_m = m;
-            v = *lu.solve(u);
-            m = _powerMethod_find_mk(v);
-            u = *v.scalarMultiply(1/m);
-            ++iter;
+        if(max_iter <= 0)
+            throw std::invalid_argument("max_iter must > 0");
+        auto dense = MatCal::Legacy::to_linalg_dense(A);
+        MatCal::Linalg::EigenOptions options;
+        options.absolute_tolerance = eps;
+        options.relative_tolerance = eps;
+        options.max_iterations = static_cast<std::size_t>(max_iter);
+        options.shift = near_num;
+        auto result = MatCal::Linalg::inverse_power_eigenpair(dense, options);
+        if(!result.success()){
+            std::string message = "PowerMethod_reverse failed: ";
+            message += MatCal::Linalg::to_string(result.status);
+            if(!result.diagnostics.empty())
+                message += " (" + result.diagnostics.front().reason + ")";
+            throw std::runtime_error(message);
         }
-        return PowerMethod_Result(near_num+1/m,u,iter);
+        Matrix vec = MatCal::Legacy::to_legacy_column_matrix(result.eigenvector);
+        return PowerMethod_Result(result.eigenvalue, vec, static_cast<int>(result.metrics.iterations));
     }
 
 }//namespace MatCal::Algorithm::Matrix
