@@ -213,6 +213,8 @@ pivot_factor * max(absolute_tolerance, relative_tolerance * matrix_scale)
 
 `omega` must be finite and satisfy `0 < omega < 2`. Success requires both a finite iterate and residual acceptance under the existing linalg residual contract. `not_converged` returns no partial solution in the core result. Metrics record iterations, operation count, matrix/RHS/solution scale, pivot tolerance, minimum diagonal magnitude, and absolute/relative residuals.
 
+M7.1 clarification: residual evaluation is part of the numerical process. If a finite matrix, RHS, and initial guess produce a non-finite initial residual, the solver returns `SolverStatus::breakdown` immediately and does not continue iterating.
+
 ## M7 Dense Power Eigen Contract
 
 `dominant_eigenpair` and `inverse_power_eigenpair` are dense reference algorithms in `MatCal::Linalg`. They are not sparse eigensolvers and do not claim robust behavior for clustered, repeated, or defective spectra.

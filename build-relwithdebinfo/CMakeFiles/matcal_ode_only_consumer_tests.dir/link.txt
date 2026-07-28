@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\matcal_ode_only_consumer_tests.dir/objects.a
+E:\minGW\mingw64\bin\ar.exe qc CMakeFiles\matcal_ode_only_consumer_tests.dir/objects.a @CMakeFiles\matcal_ode_only_consumer_tests.dir\objects1.rsp
+E:\minGW\mingw64\bin\c++.exe -O2 -g -DNDEBUG -Wl,--whole-archive CMakeFiles\matcal_ode_only_consumer_tests.dir/objects.a -Wl,--no-whole-archive -o matcal_ode_only_consumer_tests.exe -Wl,--out-implib,libmatcal_ode_only_consumer_tests.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\matcal_ode_only_consumer_tests.dir\linkLibs.rsp

@@ -1,0 +1,2 @@
+E:\minGW\mingw64\bin\ar.exe qc libmatcal_linalg.a CMakeFiles/matcal_linalg.dir/src/linalg/DenseSolver.cpp.obj CMakeFiles/matcal_linalg.dir/src/linalg/SymmetricSkylineMatrix.cpp.obj CMakeFiles/matcal_linalg.dir/src/linalg/SkylineLdlt.cpp.obj
+E:\minGW\mingw64\bin\ranlib.exe libmatcal_linalg.a

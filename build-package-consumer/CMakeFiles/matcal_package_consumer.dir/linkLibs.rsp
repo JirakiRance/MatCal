@@ -1,0 +1,1 @@
+ "E:/Ducuments/codeForVScode/MatCal/build-install/lib/libmatcal_linalg.a" "E:/Ducuments/codeForVScode/MatCal/build-install/lib/libmatcal_linalg.a" -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 

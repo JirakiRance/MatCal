@@ -29,6 +29,16 @@ void conversion_adapters_deep_copy() {
     expect_near(back.get(1, 0), 6.0, 0.0, "column vector roundtrip");
     expect_throw([&] { (void)MatCal::Legacy::to_linalg_column_vector(legacy); },
                  "adapter rejects non-column vector");
+
+    MatCal::Utils::Matrix empty(0, 0);
+    auto empty_dense = MatCal::Legacy::to_linalg_dense(empty);
+    auto empty_back = MatCal::Legacy::to_legacy_matrix(empty_dense);
+    expect_true(empty_dense.rows() == 0 && empty_dense.cols() == 0, "empty matrix converts to linalg");
+    expect_true(empty_back.getRows() == 0 && empty_back.getCols() == 0, "empty matrix roundtrip");
+
+    MatCal::Utils::Matrix nonfinite{{1.0, std::numeric_limits<double>::quiet_NaN()}};
+    expect_throw([&] { (void)MatCal::Legacy::to_linalg_dense(nonfinite); },
+                 "adapter rejects non-finite matrix values");
 }
 
 void direct_solver_facade_matches_linalg() {
@@ -38,6 +48,36 @@ void direct_solver_facade_matches_linalg() {
     expect_near(solved->get(0, 0), 3.0, 1.0e-12, "legacy direct solver x0");
     expect_near(solved->get(1, 0), 2.0, 1.0e-12, "legacy direct solver x1");
     expect_near(a.get(0, 0), 0.0, 0.0, "legacy direct solver does not modify A");
+
+    MatCal::Utils::Matrix multi_rhs{{2.0, 4.0}, {5.0, 11.0}};
+    auto multi = MatCal::Algorithm::Matrix::solve_columnElimination(a, multi_rhs);
+    expect_near(multi->get(0, 0), 3.0, 1.0e-12, "legacy direct multi RHS col0 x0");
+    expect_near(multi->get(1, 0), 2.0, 1.0e-12, "legacy direct multi RHS col0 x1");
+    expect_near(multi->get(0, 1), 7.0, 1.0e-12, "legacy direct multi RHS col1 x0");
+    expect_near(multi->get(1, 1), 4.0, 1.0e-12, "legacy direct multi RHS col1 x1");
+
+    MatCal::Utils::Matrix empty_a(0, 0);
+    MatCal::Utils::Matrix empty_b(0, 0);
+    auto empty_solution = MatCal::Algorithm::Matrix::solve_columnElimination(empty_a, empty_b);
+    expect_true(empty_solution->getRows() == 0 && empty_solution->getCols() == 0,
+                "legacy direct empty system returns empty matrix");
+
+    MatCal::Utils::Matrix rhs_with_nan{{1.0, std::numeric_limits<double>::quiet_NaN()}, {2.0, 3.0}};
+    expect_throw([&] { (void)MatCal::Algorithm::Matrix::solve_columnElimination(a, rhs_with_nan); },
+                 "legacy direct rejects non-finite RHS before returning a partial result");
+    expect_near(a.get(0, 0), 0.0, 0.0, "legacy direct failed multi RHS keeps A unchanged");
+    expect_near(rhs_with_nan.get(1, 1), 3.0, 0.0, "legacy direct failed multi RHS keeps b unchanged");
+}
+
+void determinant_and_lu_compatibility_edges() {
+    MatCal::Utils::Matrix swap_matrix{{0.0, 1.0}, {1.0, 0.0}};
+    double det = MatCal::Algorithm::Matrix::determinant(swap_matrix);
+    expect_near(det, -1.0, 0.0, "determinant keeps row-swap parity");
+    expect_near(swap_matrix.get(0, 0), 0.0, 0.0, "determinant does not modify input");
+
+    MatCal::Utils::Matrix pivoting_required{{0.0, 1.0}, {1.0, 1.0}};
+    expect_throw([&] { (void)MatCal::Algorithm::Matrix::LU_Decompose(pivoting_required); },
+                 "no-pivot LU reports pivoting-required failure");
 }
 
 void stationary_legacy_delegates_linalg() {
@@ -93,6 +133,7 @@ void derivative_helpers_delegate_calculus() {
 int main() {
     conversion_adapters_deep_copy();
     direct_solver_facade_matches_linalg();
+    determinant_and_lu_compatibility_edges();
     stationary_legacy_delegates_linalg();
     eigen_legacy_delegates_linalg();
     derivative_helpers_delegate_calculus();

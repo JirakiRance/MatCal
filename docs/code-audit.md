@@ -194,3 +194,23 @@ New coverage:
 - Dense power and inverse-power eigen residual tests.
 - Legacy/new differential tests for Matrix solvers, eigen solvers, and multivariable derivative helpers.
 - Public-header self-contained and multi-translation-unit coverage for the new Linalg headers.
+
+## M7.1 Numerical Contract Audit
+
+M7.1 adds edge-case tests before making targeted fixes.
+
+Confirmed bug:
+
+- A finite stationary iterative system could produce an infinite initial residual when evaluating `Ax-b` for a finite nonzero initial guess. The solver did not immediately report `breakdown`; it continued into the iteration loop. The minimal regression case uses finite `DBL_MAX` matrix entries and initial guess `{1, 1}` so the first row residual sum overflows.
+
+M7.1 repairs:
+
+- Stationary solvers now return `SolverStatus::breakdown` immediately when initial residual metrics are non-finite, and they return no partial solution.
+- Legacy `solve_columnElimination` now prevalidates every RHS entry before solving multi-RHS systems.
+- The targeted legacy warning list was repaired without deleting public APIs: `QinJiuShao` signed/unsigned loop, deprecated private `sortByDegree()` call from `remove_fake()`, and focused-build `solve_Linear_System` unused warnings.
+
+New coverage:
+
+- Stationary solver zero-size, zero-matrix, 1x1, zero-RHS/nonzero-initial, invalid initial guess, omega-near-boundary, residual-overflow, input-preservation, and fixed-seed dense/direct differential tests.
+- Eigen solver tiny/huge scale, near-zero initial vector, repeated dominant magnitude, near/exact shift, non-finite input, input-preservation, and fixed-seed symmetric residual tests.
+- Legacy adapter empty roundtrip, non-finite rejection, multi-RHS direct solve, direct failure input preservation, determinant parity, and no-pivot LU failure tests.

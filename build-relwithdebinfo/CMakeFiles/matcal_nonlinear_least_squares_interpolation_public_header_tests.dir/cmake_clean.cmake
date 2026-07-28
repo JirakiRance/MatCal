@@ -1,0 +1,19 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/header_least_squares_self_contained.cpp.obj"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/header_least_squares_self_contained.cpp.obj.d"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/header_nonlinear_self_contained.cpp.obj"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/header_nonlinear_self_contained.cpp.obj.d"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/header_polynomial_interpolation_self_contained.cpp.obj"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/header_polynomial_interpolation_self_contained.cpp.obj.d"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/nonlinear_least_squares_interpolation_public_headers_main.cpp.obj"
+  "CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/tests/nonlinear_least_squares_interpolation_public_headers_main.cpp.obj.d"
+  "libmatcal_nonlinear_least_squares_interpolation_public_header_tests.dll.a"
+  "matcal_nonlinear_least_squares_interpolation_public_header_tests.exe"
+  "matcal_nonlinear_least_squares_interpolation_public_header_tests.exe.manifest"
+  "matcal_nonlinear_least_squares_interpolation_public_header_tests.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/matcal_nonlinear_least_squares_interpolation_public_header_tests.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

@@ -93,9 +93,10 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 ## M7 Matrix, Iterative, Eigen, and Derivative Migration Notes
 
 - Legacy matrix-to-linalg adapters deep-copy data and reject non-finite values. They do not provide zero-copy views.
-- Legacy `solve_columnElimination` now delegates to `MatCal::Linalg::solve_dense_partial_pivot`. Multiple right-hand sides are solved column-by-column; a future factorization object could avoid repeated factorization.
+- Legacy `solve_columnElimination` now delegates to `MatCal::Linalg::solve_dense_partial_pivot`. Multiple right-hand sides are prevalidated and then solved column-by-column; a future factorization object could avoid repeated factorization.
 - Legacy `Jacobi`, `Gauss_Seidel`, and `SOR` now delegate to `MatCal::Linalg` stationary solvers. Core non-convergence returns `SolverStatus::not_converged` without a partial solution; the legacy facade maps this to `converged=false`.
 - `MatCal::Linalg` stationary solvers are dense reference algorithms. They do not include sparse matrix support, preconditioners, or convergence guarantees for non-diagonally-dominant systems.
+- M7.1 fixes a stationary-solver edge case where an overflowed initial residual could continue into the iteration loop instead of immediately returning `breakdown`.
 - Legacy `PowerMethod` and `PowerMethod_reverse` now delegate to `MatCal::Linalg` eigen solvers. Shifted inverse power uses the dense partial-pivot solver instead of legacy no-pivot LU.
 - The M7 eigen solvers are basic dense power iterations. Repeated, clustered, or difficult eigenvalues may converge slowly or report `not_converged`.
 - Legacy `LU_Decompose` remains no-pivot LU and is not silently replaced with pivoted LU.

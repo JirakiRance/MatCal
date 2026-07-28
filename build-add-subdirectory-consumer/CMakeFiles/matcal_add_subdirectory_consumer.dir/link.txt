@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\matcal_add_subdirectory_consumer.dir/objects.a
+E:\minGW\mingw64\bin\ar.exe qc CMakeFiles\matcal_add_subdirectory_consumer.dir/objects.a @CMakeFiles\matcal_add_subdirectory_consumer.dir\objects1.rsp
+E:\minGW\mingw64\bin\c++.exe -g -Wl,--whole-archive CMakeFiles\matcal_add_subdirectory_consumer.dir/objects.a -Wl,--no-whole-archive -o matcal_add_subdirectory_consumer.exe -Wl,--out-implib,libmatcal_add_subdirectory_consumer.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\matcal_add_subdirectory_consumer.dir\linkLibs.rsp

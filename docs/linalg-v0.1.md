@@ -102,6 +102,7 @@ Contracts:
 - diagonal entries must be above `pivot_factor * max(abs_tol, rel_tol * matrix_scale)`;
 - `solve_sor` requires finite `0 < omega < 2`;
 - success is based on the same absolute/relative residual acceptance style used by the dense solver;
+- non-finite initial or per-iteration residual evaluation is reported as `SolverStatus::breakdown`;
 - numerical failure and non-convergence do not return partial-success solutions.
 
 ## Power Eigen Solvers

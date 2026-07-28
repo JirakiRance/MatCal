@@ -53,7 +53,12 @@ Legacy warning debt remains documented here and is not required to be zeroed bef
 
 - `Derivative::pF_px` and `Derivative::dF_dx` no longer own their old finite-difference loops. They delegate to `MatCal::Calculus`, which also removes the previous `Derivative::dF_dx` signed/unsigned loop warning source.
 
-## M7 Remaining Legacy Warnings
+## Fixed in M7.1
 
-- `QinJiuShao(int, std::vector<double>&)` still compares an `int` loop index with `zeros.size()`.
-- `solve_Linear_System` may still appear unused in focused test builds.
+- `QinJiuShao(int, std::vector<double>&)` now uses an unsigned loop index when walking `zeros`.
+- Deprecated private `sortByDegree()` is no longer called from the deprecated private `remove_fake()` helper body.
+- `solve_Linear_System` is marked `[[maybe_unused]]` to preserve the legacy helper while avoiding focused-build unused warnings.
+
+## M7.1 Remaining Legacy Warnings
+
+- No known GCC warning remains from the M7.1 targeted legacy warning list.
