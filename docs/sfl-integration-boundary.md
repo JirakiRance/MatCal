@@ -11,8 +11,8 @@ SFL -> MatCal
 ## Integration Model
 
 - SFL should pin MatCal through a Git submodule or another exact-version mechanism.
-- MatCal now provides a `MatCal::Linalg` CMake target as a 0.x development API. SFL integration should wait for an explicit integration stage and pin an exact MatCal commit or tag.
-- SFL should consume MatCal with `target_link_libraries(... MatCal::Linalg)`.
+- MatCal now provides `MatCal::Linalg`, `MatCal::Polynomial`, `MatCal::Roots`, and `MatCal::Interpolation` CMake targets as 0.x development APIs. SFL integration should wait for an explicit integration stage and pin an exact MatCal commit or tag.
+- SFL should consume MatCal with `target_link_libraries` and the needed MatCal targets.
 - SFL should not copy MatCal source files into its own repository.
 - SFL should not maintain a forked MatCal subtree as its internal implementation.
 - SFL should not use a precompiled MatCal binary as the default integration path; the default should be a pinned source version built through CMake.
@@ -33,6 +33,7 @@ SFL -> MatCal
 - General solver options.
 - General solver results.
 - Numerical algorithms with domain-neutral contracts.
+- General scalar root solving and interpolation.
 
 ## M1 Boundary
 

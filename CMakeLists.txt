@@ -23,6 +23,28 @@ target_include_directories(matcal_polynomial
 )
 set_target_properties(matcal_polynomial PROPERTIES EXPORT_NAME Polynomial)
 
+add_library(matcal_roots INTERFACE)
+add_library(MatCal::Roots ALIAS matcal_roots)
+
+target_compile_features(matcal_roots INTERFACE cxx_std_20)
+target_include_directories(matcal_roots
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_roots PROPERTIES EXPORT_NAME Roots)
+
+add_library(matcal_interpolation INTERFACE)
+add_library(MatCal::Interpolation ALIAS matcal_interpolation)
+
+target_compile_features(matcal_interpolation INTERFACE cxx_std_20)
+target_include_directories(matcal_interpolation
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_interpolation PROPERTIES EXPORT_NAME Interpolation)
+
 add_library(matcal_legacy INTERFACE)
 add_library(MatCal::Legacy ALIAS matcal_legacy)
 
@@ -32,7 +54,7 @@ target_include_directories(matcal_legacy
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(matcal_legacy INTERFACE MatCal::Polynomial)
+target_link_libraries(matcal_legacy INTERFACE MatCal::Polynomial MatCal::Roots MatCal::Interpolation)
 set_target_properties(matcal_legacy PROPERTIES EXPORT_NAME Legacy)
 
 add_library(matcal_linalg
@@ -82,7 +104,7 @@ endfunction()
 
 matcal_configure_linalg_target(matcal_linalg)
 
-install(TARGETS matcal_polynomial matcal_legacy matcal_linalg
+install(TARGETS matcal_polynomial matcal_roots matcal_interpolation matcal_legacy matcal_linalg
     EXPORT MatCalTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -169,6 +191,20 @@ if(BUILD_TESTING)
         add_test(NAME ${target_name} COMMAND ${target_name})
     endfunction()
 
+    function(matcal_add_roots_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Roots MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
+    function(matcal_add_interpolation_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Interpolation MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
     matcal_add_polynomial_test(matcal_polynomial_tests
         tests/polynomial_tests.cpp
     )
@@ -183,6 +219,46 @@ if(BUILD_TESTING)
         tests/polynomial_multi_tu_a.cpp
         tests/polynomial_multi_tu_b.cpp
     )
+
+    matcal_add_roots_test(matcal_roots_tests
+        tests/roots_tests.cpp
+    )
+
+    matcal_add_interpolation_test(matcal_interpolation_tests
+        tests/interpolation_tests.cpp
+    )
+
+    add_executable(matcal_roots_interpolation_public_header_tests
+        tests/roots_interpolation_public_headers_main.cpp
+        tests/header_roots_self_contained.cpp
+        tests/header_linear_interpolator_self_contained.cpp
+        tests/header_cubic_spline_self_contained.cpp
+    )
+    target_link_libraries(matcal_roots_interpolation_public_header_tests PRIVATE
+        MatCal::Roots
+        MatCal::Interpolation
+    )
+    matcal_configure_test_target(matcal_roots_interpolation_public_header_tests)
+    add_test(NAME matcal_roots_interpolation_public_header_tests COMMAND matcal_roots_interpolation_public_header_tests)
+
+    add_executable(matcal_roots_interpolation_multi_tu_tests
+        tests/roots_interpolation_multi_tu_main.cpp
+        tests/roots_multi_tu_a.cpp
+        tests/interpolation_multi_tu_b.cpp
+    )
+    target_link_libraries(matcal_roots_interpolation_multi_tu_tests PRIVATE
+        MatCal::Roots
+        MatCal::Interpolation
+    )
+    matcal_configure_test_target(matcal_roots_interpolation_multi_tu_tests)
+    add_test(NAME matcal_roots_interpolation_multi_tu_tests COMMAND matcal_roots_interpolation_multi_tu_tests)
+
+    add_executable(matcal_pt_style_consumer_tests
+        tests/pt_style_consumer/main.cpp
+    )
+    target_link_libraries(matcal_pt_style_consumer_tests PRIVATE MatCal::Legacy)
+    matcal_configure_test_target(matcal_pt_style_consumer_tests)
+    add_test(NAME matcal_pt_style_consumer_tests COMMAND matcal_pt_style_consumer_tests)
 
     matcal_add_linalg_test(matcal_linalg_vector_tests
         tests/linalg/vector_tests.cpp

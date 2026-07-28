@@ -10,4 +10,6 @@ target_link_libraries(matcal_package_consumer PRIVATE
     MatCal::Legacy
     MatCal::Linalg
     MatCal::Polynomial
+    MatCal::Roots
+    MatCal::Interpolation
 )

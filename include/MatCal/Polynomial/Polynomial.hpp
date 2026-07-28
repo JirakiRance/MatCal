@@ -19,6 +19,7 @@ public:
     using term = std::pair<size_type, double>;
 
     static constexpr double zero_tolerance = 1.0e-12;
+    static constexpr size_type max_dense_degree = 1000000;
 
     Polynomial() = default;
 
@@ -44,6 +45,9 @@ public:
         }
         if (degree == std::numeric_limits<size_type>::max()) {
             throw std::length_error("polynomial degree overflow");
+        }
+        if (degree > max_dense_degree) {
+            throw std::length_error("polynomial degree exceeds dense storage limit");
         }
 
         std::vector<double> coefficients(degree + 1, 0.0);

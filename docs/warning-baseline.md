@@ -9,12 +9,10 @@ This document records warning status after M0.1. It is a compatibility tool, not
 
 ## Still Present in Legacy Headers
 
-- `QinJiuShao` has deprecated implicit copy-assignment warnings because it defines a copy constructor but not a matching assignment operator.
 - Some loops compare signed `int` indices with unsigned `size_t` container sizes.
 - `Insert.hpp` has `const` on a scalar return type.
 - `CompositeNewtonCotes` keeps an unused local in one path.
 - `solve_Linear_System` is an inline legacy helper that may appear unused in focused test builds.
-- `Picard::solve` keeps an unused `last_delta` local.
 
 ## M1 Handling
 
@@ -29,3 +27,8 @@ Warnings that expose confirmed unsafe behavior should get tests and targeted fix
 `matcal_linalg` and its tests are built with stricter warning settings than legacy tests. On GCC/Clang-family compilers this includes `-Wall -Wextra -Wpedantic -Werror`.
 
 Legacy warning debt remains documented here and is not required to be zeroed before M1 is accepted.
+
+## Fixed in M4
+
+- `QinJiuShao` now declares copy/move assignment explicitly. This removes the deprecated implicit copy-assignment warning source without changing the public class name or constructor set.
+- The migrated `Picard::solve` path no longer owns the old unused `last_delta` local.

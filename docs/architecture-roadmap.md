@@ -1,16 +1,18 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation.
 
 ## Current Shape
 
-MatCal now has two parallel surfaces:
+MatCal now has compatibility and focused numerical targets:
 
 - `MatCal::Legacy`: the header-only legacy library with broad public APIs in five headers.
 - `MatCal::Linalg`: the new 0.x value-type linalg target under `include/MatCal/Linalg`.
 - `MatCal::Polynomial`: the M3 value-type polynomial core extracted from `QinJiuShao`.
+- `MatCal::Roots`: the M4 scalar root-finding core extracted from `Iteration.hpp`.
+- `MatCal::Interpolation`: the M4 interpolation core extracted from `Insert.hpp`.
 
-`MatCal::Legacy` now depends on `MatCal::Polynomial` for migrated polynomial algorithms. `MatCal::Linalg` remains independent from Legacy.
+`MatCal::Legacy` now depends on `MatCal::Polynomial`, `MatCal::Roots`, and `MatCal::Interpolation` for migrated algorithms. `MatCal::Linalg` remains independent from Legacy.
 
 ## Direction
 
@@ -27,6 +29,8 @@ Public targets:
 - `MatCal::Legacy`: current API surface.
 - `MatCal::Linalg`: 0.x development API for independent vector/matrix storage and reference solvers.
 - `MatCal::Polynomial`: 0.x development API for polynomial value operations.
+- `MatCal::Roots`: 0.x development API for scalar nonlinear solves.
+- `MatCal::Interpolation`: 0.x development API for interpolation.
 
 Future public targets may include:
 
@@ -77,6 +81,14 @@ M3 adds:
 - `MatCal::Legacy` delegation from `QinJiuShao` into the shared polynomial core.
 - Installable CMake package files for `find_package(MatCal CONFIG)`.
 - A migration matrix in `docs/legacy-migration-matrix.md`.
+
+M4 adds:
+
+- `MatCal::Roots` result/status/options contracts.
+- Legacy delegation for `Bisection`, `Picard`, `Picard-Aitken`, `Newton`, downhill Newton, and secant variants.
+- `MatCal::Interpolation::LinearInterpolator` and natural `CubicSpline`.
+- Legacy delegation for `LinearInsert` and `CubicSpline`.
+- PT-style source consumer and package/add-subdirectory consumer checks.
 
 ## Future Capabilities
 

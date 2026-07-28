@@ -146,6 +146,9 @@ public:
         this->parameters = qin.getParameters();
         this->cleanup();
     }
+    QinJiuShao(QinJiuShao&& qin) noexcept = default;
+    QinJiuShao& operator=(const QinJiuShao& qin) = default;
+    QinJiuShao& operator=(QinJiuShao&& qin) noexcept = default;
     //析构函数
     ~QinJiuShao(){
         this->clear();

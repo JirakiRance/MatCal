@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -114,3 +114,28 @@ Residual metrics use the same definition. The factorization owns its factors and
 ## Solver Policy Direction
 
 Automatic fallback, such as trying Gauss-Seidel after direct solve failure, should move out of low-level solvers into explicit policy functions. Low-level solver APIs should report why they failed.
+
+## M4 Roots Contract
+
+`MatCal::Roots` separates root status from the last iterate. `RootResult::success()` is true only when `RootStatus::success` and `converged` are both true.
+
+Scalar root options use absolute and relative tolerances for iterate/step acceptance. Bisection accepts exact zero residual or interval-step convergence; it does not accept tiny absolute residual alone because function scaling is caller-defined and can be arbitrarily small.
+
+Machine-readable diagnostics distinguish:
+
+- invalid callable/options/input;
+- interval or sign-change failure;
+- derivative near zero;
+- secant denominator near zero;
+- non-finite function value or iterate;
+- maximum iteration exhaustion.
+
+Legacy `solveDetailed` functions map this contract back to old structs. Legacy throwing APIs still throw on invalid setup and numerical breakdown, and throw on non-convergence where they historically did.
+
+## M4 Interpolation Contract
+
+`MatCal::Interpolation::LinearInterpolator` and `CubicSpline` own their nodes. `xs` and `ys` must have matching size, at least two nodes, finite entries, and strictly increasing `x`.
+
+`LinearInterpolator` uses binary interval lookup and the legacy segment formula. Extrapolation is explicit: reject, clamp, or extrapolate. The new default is reject; legacy `LinearInsert` uses extrapolate for source behavior compatibility.
+
+`CubicSpline` is a natural cubic spline. Endpoint second derivatives are zero. The interior tridiagonal system and evaluation formula match the legacy `CubicSpline` implementation, but the new core uses an owned tridiagonal solve rather than Legacy Matrix dynamic polymorphism. For two nodes it degenerates to a line with zero second derivatives.

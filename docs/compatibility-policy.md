@@ -71,6 +71,18 @@ M3 starts moving correct Legacy algorithms into shared modern cores.
 - Installed packages include legacy headers at the include root so old includes such as `#include "QinJiuShao.hpp"` continue to work for target-based consumers.
 - ABI stability is still not promised.
 
+## M4 Legacy Migration Policy
+
+M4 continues the facade strategy for scalar roots and interpolation.
+
+- `Bisection`, `Picard`, `Newton`, and `Secant` keep their legacy class names, function names, argument order, old result structs, and exception-oriented `solve` behavior.
+- `LinearInsert` and `CubicSpline` keep their legacy constructors, `calculate`, `getXs`, `getYs`, and `getM` accessors.
+- Legacy scalar root APIs now delegate to `MatCal::Roots`.
+- Legacy `LinearInsert` and `CubicSpline` now delegate to `MatCal::Interpolation`.
+- The new interpolation core defaults to rejecting extrapolation, but legacy interpolation explicitly uses extrapolation to preserve old PT-style behavior.
+- Bisection no longer treats a tiny absolute residual alone as endpoint success. This fixes scaled-function false positives such as `1e-20 * (x - c)`.
+- Consumers using the new source package should recompile. ABI stability and compatibility with old precompiled binaries are still not promised.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

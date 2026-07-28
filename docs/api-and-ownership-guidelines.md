@@ -63,6 +63,13 @@ Legacy signatures frequently use non-const references even when the function cop
 - `to_function()` captures a value copy and does not borrow `this`.
 - Legacy `QinJiuShao` adapts to/from the polynomial value type when using migrated math operations.
 
+## M4 Roots and Interpolation Ownership
+
+- `MatCal::Roots` accepts `std::function<double(double)>` by value/reference at the call boundary and does not store callables after the solve returns.
+- `RootResult` owns its diagnostic, metrics, and optional iteration series.
+- `MatCal::Interpolation::LinearInterpolator` and `CubicSpline` own their node and coefficient storage.
+- Legacy `LinearInsert` and `CubicSpline` keep old getters but mirror data owned by the new interpolation core.
+
 ## Printing and Diagnostics
 
 Core library code should not print to stdout in new APIs. Use return status, exceptions for programmer errors, or optional caller-provided diagnostics.

@@ -2,6 +2,7 @@ test/
 .vscode/
 build/
 build-release/
+build-sanitize/
 *.exe
 src/output/
 test/output/

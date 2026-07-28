@@ -41,6 +41,8 @@ void oracle_tests() {
     Polynomial sparse = Polynomial::from_terms({{12, 3.0}, {0, -1.0}});
     expect_true(sparse.degree() == 12, "high sparse term degree");
     expect_near(sparse.evaluate(2.0), 12287.0, 1e-12, "high sparse term evaluation");
+    expect_throw([] { (void)Polynomial::from_terms({{Polynomial::max_dense_degree + 1, 1.0}}); },
+                 "huge sparse degree rejected before dense allocation");
 
     std::function<double(double)> callable;
     {
@@ -86,6 +88,11 @@ void legacy_differential_tests() {
 
     expect_near(legacy.definiteIntegral(-1.0, 2.0), core.definite_integral(-1.0, 2.0), 1e-12,
                 "legacy definite integral delegates core");
+    QinJiuShao product_other({{1, -1.0}, {0, 2.0}});
+    expect_near(legacy.product(product_other, -1.0, 1.0),
+                (core * Polynomial::from_terms({{1, -1.0}, {0, 2.0}})).definite_integral(-1.0, 1.0),
+                1e-12,
+                "legacy product uses delegated polynomial operations");
     auto f = legacy.toFunction();
     expect_near(f(2.0), core.evaluate(2.0), 1e-12, "legacy owning callable delegates core");
 }

@@ -24,6 +24,8 @@ namespace MatCal {
 
 #include"QinJiuShao.hpp"
 #include"Matrix.hpp"
+#include"MatCal/Interpolation/CubicSpline.hpp"
+#include"MatCal/Interpolation/LinearInterpolator.hpp"
 
 
 namespace MatCal::Algorithm::Insert{
@@ -501,23 +503,7 @@ public:
     // 计算样条
     double calculate(double x) const
     {
-        int n = static_cast<int>(X.size());
-        if (n < 2) throw std::invalid_argument("CubicSpline: no data!");
-
-        // 二分查找所在区间
-        int i = findInterval(x);
-        double h = X[i+1] - X[i];
-
-        double A = (X[i+1] - x) / h;
-        double B = (x - X[i]) / h;
-
-        // 样条表达式：
-        // S(x)= A*y_i + B*y_{i+1} + ((A^3-A)*h^2/6)*M_i + ((B^3-B)*h^2/6)*M_{i+1}
-        double term1 = A * Y[i] + B * Y[i+1];
-        double term2 = ((A*A*A - A) * h * h / 6.0) * M[i];
-        double term3 = ((B*B*B - B) * h * h / 6.0) * M[i+1];
-
-        return term1 + term2 + term3;
+        return spline.evaluate(x);
     }
 
     const std::vector<double>& getXs() const { return X; }
@@ -531,62 +517,10 @@ private:
     void construct(const std::vector<double>& xs,
                    const std::vector<double>& ys)
     {
-        int n = xs.size();
-        if (n < 2 || ys.size() != xs.size())
-            throw std::invalid_argument("CubicSpline: xs,ys size mismatch or too small!");
-
-        // 节点不得重复
-        for (int i = 1; i < n; ++i) {
-            if (std::abs(xs[i] - xs[i-1]) < 1e-12)
-                throw std::invalid_argument("CubicSpline: duplicated x values");
-        }
-
-        X = xs;
-        Y = ys;
-        M.assign(n, 0.0);
-
-        if (n == 2) {
-            // 只有两个点时，M_i=0 等价于线性插值
-            return;
-        }
-
-        //======================================================
-        // Step 1: 构造三对角方程 A*M = d
-        //======================================================
-        std::vector<double> h(n-1);
-        for (int i = 0; i < n-1; ++i)
-            h[i] = X[i+1] - X[i];
-
-        Matrix A(n, n);
-        std::vector<double> d(n, 0.0);
-
-        // 自然样条边界
-        A.set(0,0,1.0);
-        A.set(n-1,n-1,1.0);
-
-        // 中间行
-        for (int i = 1; i < n-1; ++i) {
-            A.set(i, i-1, h[i-1] / 6.0);
-            A.set(i, i, (h[i-1] + h[i]) / 3.0);
-            A.set(i, i+1, h[i] / 6.0);
-
-            d[i] = (Y[i+1] - Y[i]) / h[i]
-                 - (Y[i] - Y[i-1]) / h[i-1];
-        }
-
-        //======================================================
-        // Step 2：求解三对角方程
-        //======================================================
-        Matrix D(n, 1);
-        for (int i = 0; i < n; ++i)
-            D.set(i,0, d[i]);
-
-        // solve(A * M = D)
-        //auto sol = A.solve(D);
-        auto sol = MatCal::Algorithm::Matrix::solve_columnElimination(A,D);
-
-        for (int i = 0; i < n; ++i)
-            M[i] = sol->get(i,0);
+        spline = MatCal::Interpolation::CubicSpline(xs, ys, MatCal::Interpolation::ExtrapolationPolicy::extrapolate);
+        X = spline.xs();
+        Y = spline.ys();
+        M = spline.second_derivatives();
     }
 
 //--------------------------------------------------------------
@@ -617,6 +551,7 @@ private:
     std::vector<double> X;   // 节点 x_i
     std::vector<double> Y;   // 节点 y_i
     std::vector<double> M;   // 二阶导数 M_i
+    MatCal::Interpolation::CubicSpline spline;
 };
 
 
@@ -664,21 +599,7 @@ public:
     // 插值计算
     //--------------------------------------------------------
     double calculate(double x) const {
-        int n = static_cast<int>(X.size());
-        if (n == 0)
-            throw std::runtime_error("LinearInsert: no data");
-        if (n == 1)
-            return Y[0];
-
-        // 边界外：线性外推（与数学定义一致）
-        if (x <= X.front())
-            return interpolate(0, 1, x);
-        if (x >= X.back())
-            return interpolate(n-2, n-1, x);
-
-        // 二分查找所在区间
-        int i = findInterval(x);
-        return interpolate(i, i+1, x);
+        return interpolator.evaluate(x);
     }
 
     //--------------------------------------------------------
@@ -693,19 +614,9 @@ private:
     //--------------------------------------------------------
     void construct_from_pairs(const std::vector<std::pair<double,double>>& data)
     {
-        int n = data.size();
-        if (n < 2)
-            throw std::invalid_argument("LinearInsert: at least 2 points required.");
-
-        X.resize(n);
-        Y.resize(n);
-
-        for (int i = 0; i < n; ++i) {
-            X[i] = data[i].first;
-            Y[i] = data[i].second;
-        }
-
-        check_and_sort();
+        interpolator = MatCal::Interpolation::LinearInterpolator(data, MatCal::Interpolation::ExtrapolationPolicy::extrapolate);
+        X = interpolator.xs();
+        Y = interpolator.ys();
     }
 
     //--------------------------------------------------------
@@ -714,13 +625,9 @@ private:
     void construct(const std::vector<double>& xs,
                    const std::vector<double>& ys)
     {
-        if (xs.size() < 2 || xs.size() != ys.size())
-            throw std::invalid_argument("LinearInsert: xs,ys size mismatch or too small");
-
-        X = xs;
-        Y = ys;
-
-        check_and_sort();
+        interpolator = MatCal::Interpolation::LinearInterpolator(xs, ys, MatCal::Interpolation::ExtrapolationPolicy::extrapolate);
+        X = interpolator.xs();
+        Y = interpolator.ys();
     }
 
     //--------------------------------------------------------
@@ -767,6 +674,7 @@ private:
 private:
     std::vector<double> X;
     std::vector<double> Y;
+    MatCal::Interpolation::LinearInterpolator interpolator;
 };
 
 

@@ -26,7 +26,7 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - Header-only definitions previously had ODR/multiple-definition risk; M0 marks known non-template definitions `inline`.
 - Many APIs use non-const references for inputs that are not intentionally mutated.
 - Many dynamic casts assume `toNormalMatrix()` returns `Matrix`; several are checked, but not all.
-- Core code prints to stdout in `show()`, negative `QinJiuShaoNode`, and `NewtonForEquations` validation paths.
+- Core code prints to stdout in legacy `show()` helpers and `NewtonForEquations` validation paths.
 - Sparse storage is triplet/vector based with linear lookup; duplicate triplets are not merged by the constructor.
 - Fixed absolute tolerances dominate numerical decisions.
 - No thread-safety contract exists. Independent objects are generally usable independently; shared mutable objects are not synchronized.
@@ -62,6 +62,12 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 - `QinJiuShao` no longer owns independent implementations of Horner evaluation, arithmetic, derivative, integral, definite integral, or owning callable creation. Those paths delegate to `MatCal::Polynomial::Polynomial`.
 - The legacy `QinJiuShaoNode` negative-degree constructor no longer prints to stdout before throwing.
-- `MatCal::Polynomial::Polynomial` uses dense coefficient storage in M3. Very high sparse-degree workloads may need a future sparse polynomial representation after measured need.
-- Interpolation classes still keep their old structure, though they now indirectly benefit when they use `QinJiuShao` operations.
-- Scalar root solvers, integration beyond `Instant`, RK4, and Newton-for-equations remain legacy-only after this M3 slice.
+- `MatCal::Polynomial::Polynomial` uses dense coefficient storage. M4 adds an explicit dense-degree limit so very high sparse terms fail before large allocation attempts. A future sparse polynomial representation should be added only after measured need.
+
+## M4 Roots and Interpolation Migration Notes
+
+- Legacy scalar root classes now delegate to `MatCal::Roots`. `NewtonForEquations` remains legacy-only and still uses Legacy Matrix and stdout in one validation path.
+- Bisection no longer accepts a tiny absolute residual alone as endpoint success. This fixes scaled-function false positives.
+- Legacy `LinearInsert` and `CubicSpline` now delegate to `MatCal::Interpolation`.
+- `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite` remain legacy-only after M4.
+- Integration beyond `Instant` and RK4 remain legacy-only.
