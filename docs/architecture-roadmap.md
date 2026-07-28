@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation.
 
 ## Current Shape
 
@@ -13,8 +13,10 @@ MatCal now has compatibility and focused numerical targets:
 - `MatCal::Interpolation`: the M4 interpolation core extracted from `Insert.hpp`.
 - `MatCal::Calculus`: the M5 finite-difference and quadrature core extracted from `Basics.hpp`.
 - `MatCal::ODE`: the M5 Euler/RK4 core extracted from `Basics.hpp`.
+- `MatCal::Nonlinear`: the M6 multivariable nonlinear-system core extracted from `Iteration.hpp`.
+- `MatCal::LeastSquares`: the M6 polynomial least-squares core extracted from `Basics.hpp`.
 
-`MatCal::Legacy` now depends on `MatCal::Polynomial`, `MatCal::Roots`, `MatCal::Interpolation`, `MatCal::Calculus`, and `MatCal::ODE` for migrated algorithms. `MatCal::Linalg` remains independent from Legacy.
+`MatCal::Legacy` now depends on `MatCal::Polynomial`, `MatCal::Roots`, `MatCal::Interpolation`, `MatCal::Calculus`, `MatCal::ODE`, `MatCal::Nonlinear`, and `MatCal::LeastSquares` for migrated algorithms. `MatCal::Linalg` remains independent from Legacy.
 
 ## Direction
 
@@ -35,6 +37,8 @@ Public targets:
 - `MatCal::Interpolation`: 0.x development API for interpolation.
 - `MatCal::Calculus`: 0.x development API for scalar differentiation and integration.
 - `MatCal::ODE`: 0.x development API for domain-neutral ODE stepping.
+- `MatCal::Nonlinear`: 0.x development API for square nonlinear systems.
+- `MatCal::LeastSquares`: 0.x development API for polynomial least-squares fitting.
 
 Future public targets may include:
 
@@ -101,6 +105,16 @@ M5 adds:
 - `MatCal::ODE` result/status contracts for simple Euler, improved Euler, and RK4 over vector states.
 - Legacy delegation for `ODE::SimpleEuler`, `ODE::Euler`, `ODE::RungeKutta_44`, and PT-sensitive `Integrate::RK4::step/step2`.
 - CMake export and consumer checks for `MatCal::Calculus` and `MatCal::ODE`.
+
+M6 adds:
+
+- `MatCal::Nonlinear` result/status/options contracts for square multivariable Newton solves.
+- Legacy delegation for `NewtonForEquations::solve`.
+- `MatCal::LeastSquares` result/status contracts for polynomial normal-equation fitting.
+- Legacy delegation for all current `Least_Square::solve` overloads.
+- `MatCal::Interpolation` polynomial interpolation helpers for Lagrange, divided-difference Newton, finite-difference Newton, and Hermite.
+- Legacy delegation for `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite`.
+- CMake export and consumer checks for `MatCal::Nonlinear` and `MatCal::LeastSquares`.
 
 ## Future Capabilities
 

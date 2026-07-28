@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. M6 adds multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation contracts. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -140,6 +140,8 @@ Legacy `solveDetailed` functions map this contract back to old structs. Legacy t
 
 `CubicSpline` is a natural cubic spline. Endpoint second derivatives are zero. The interior tridiagonal system and evaluation formula match the legacy `CubicSpline` implementation, but the new core uses an owned tridiagonal solve rather than Legacy Matrix dynamic polymorphism. For two nodes it degenerates to a line with zero second derivatives.
 
+M6 polynomial interpolation functions own their input-derived coefficients through `MatCal::Polynomial::Polynomial`. Lagrange, divided-difference Newton, finite-difference Newton, and Hermite interpolation reject non-finite nodes, duplicate nodes, and invalid sizes before constructing a polynomial. Newton finite differences require a finite positive spacing `h`; non-equidistant data is outside that API contract.
+
 ## M5 Calculus Contract
 
 `MatCal::Calculus` rejects empty callables, non-finite coordinates, non-finite step sizes, non-positive finite-difference steps, invalid Newton-Cotes orders, invalid segment counts, and non-finite function values. New APIs return structured `CalculusDiagnostic` data instead of printing.
@@ -172,3 +174,25 @@ Trajectory rows are owned and use the compatibility shape:
 ```text
 [t, y0, y1, ...]
 ```
+
+## M6 Nonlinear Contract
+
+`MatCal::Nonlinear` solves square vector systems with Newton iteration. It reuses the legacy Newton equation `J * delta = -F` but returns structured `NonlinearResult` values.
+
+Options require finite non-negative absolute and relative tolerances, a finite positive finite-difference step, nonzero `max_iterations`, and valid linalg options.
+
+Success requires a finite residual that satisfies:
+
+```text
+residual_norm <= max(abs_tol, rel_tol * max(initial_residual_norm, 1))
+```
+
+Step convergence is accepted only together with residual acceptance. Singular Jacobians are reported separately from non-finite breakdown. Numerical failures return no partial solution.
+
+## M6 Least-Squares Contract
+
+`MatCal::LeastSquares` keeps the legacy weighted normal-equation formula for polynomial fitting. This is a compatibility baseline, not a claim of high numerical stability.
+
+Inputs require matching finite `x`, `y`, and weight vectors. Weights must be strictly positive in the M6 core. Selected degree lists must be non-empty and non-negative.
+
+Rank-deficient normal equations return `LeastSquaresStatus::rank_deficient`. Overflow while building powers, normal equations, or the right-hand side returns `breakdown`. Successful results include coefficients, selected degrees, the fitted polynomial, normal matrix, right-hand side, sample count, term count, and infinity residual over the samples.

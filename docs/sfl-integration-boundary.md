@@ -11,7 +11,7 @@ SFL -> MatCal
 ## Integration Model
 
 - SFL should pin MatCal through a Git submodule or another exact-version mechanism.
-- MatCal now provides `MatCal::Linalg`, `MatCal::Polynomial`, `MatCal::Roots`, `MatCal::Interpolation`, `MatCal::Calculus`, and `MatCal::ODE` CMake targets as 0.x development APIs. SFL integration should wait for an explicit integration stage and pin an exact MatCal commit or tag.
+- MatCal now provides `MatCal::Linalg`, `MatCal::Polynomial`, `MatCal::Roots`, `MatCal::Interpolation`, `MatCal::Calculus`, `MatCal::ODE`, `MatCal::Nonlinear`, and `MatCal::LeastSquares` CMake targets as 0.x development APIs. SFL integration should wait for an explicit integration stage and pin an exact MatCal commit or tag.
 - SFL should consume MatCal with `target_link_libraries` and the needed MatCal targets.
 - SFL should not copy MatCal source files into its own repository.
 - SFL should not maintain a forked MatCal subtree as its internal implementation.
@@ -35,6 +35,8 @@ SFL -> MatCal
 - Numerical algorithms with domain-neutral contracts.
 - General scalar root solving and interpolation.
 - General scalar differentiation, quadrature, and ODE stepping over value-owned vectors.
+- General multivariable nonlinear solving for numeric vectors.
+- General polynomial least-squares fitting.
 
 ## M1 Boundary
 
@@ -57,6 +59,8 @@ M2.1 freezes the generic capabilities needed for a later integration stage:
 - receive structured non-success results without partial solutions for numerical failures.
 
 M5 keeps calculus and ODE boundaries equally generic. `MatCal::ODE` accepts only numeric time, numeric state vectors, and numeric RHS callables. It does not accept PT mechanism types, SFL AST nodes, FEM element connectivity, materials, loads, constraints, stress recovery requests, CAE IR, diagnostics, or Result IR.
+
+M6 keeps nonlinear and least-squares boundaries generic. `MatCal::Nonlinear` accepts numeric vectors, residual callables, optional Jacobian callables, and numeric options. `MatCal::LeastSquares` accepts numeric samples, weights, and polynomial term selections. Neither target accepts SFL AST, FEM element connectivity, constraints, mesh ownership, materials, loads, source diagnostics, CAE IR, or Result IR.
 
 ## SFL Keeps
 

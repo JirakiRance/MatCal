@@ -10,7 +10,6 @@ This document records warning status after M0.1. It is a compatibility tool, not
 ## Still Present in Legacy Headers
 
 - Some loops compare signed `int` indices with unsigned `size_t` container sizes.
-- `Insert.hpp` has `const` on a scalar return type.
 - `solve_Linear_System` is an inline legacy helper that may appear unused in focused test builds.
 
 ## M1 Handling
@@ -39,3 +38,14 @@ Legacy warning debt remains documented here and is not required to be zeroed bef
 ## M5 Remaining Legacy Warnings
 
 - Multivariable derivative helpers and least-squares paths in `Basics.hpp` still compare old `int` dimensions with container `size()`. They remain legacy-only after M5.
+
+## Fixed in M6
+
+- `Insert.hpp` no longer returns scalar `getDegree()` values as `const int`.
+- Legacy `NewtonForEquations` and `Least_Square` no longer own the migrated loops that contributed extra signed/unsigned warnings.
+
+## M6 Remaining Legacy Warnings
+
+- `QinJiuShao(int, std::vector<double>&)` still compares an `int` loop index with `zeros.size()`.
+- `Derivative::dF_dx` still compares an `int` loop index with `xs.size()`.
+- `solve_Linear_System` may still appear unused in focused test builds.

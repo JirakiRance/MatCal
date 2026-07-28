@@ -3,6 +3,9 @@
 #include "MatCal/Linalg/DenseSolver.hpp"
 #include "MatCal/Calculus/Calculus.hpp"
 #include "MatCal/Interpolation/LinearInterpolator.hpp"
+#include "MatCal/Interpolation/PolynomialInterpolation.hpp"
+#include "MatCal/LeastSquares/LeastSquares.hpp"
+#include "MatCal/Nonlinear/Nonlinear.hpp"
 #include "MatCal/ODE/ODE.hpp"
 #include "MatCal/Polynomial/Polynomial.hpp"
 #include "MatCal/Roots/Roots.hpp"
@@ -22,6 +25,28 @@ int main() {
     MatCal::Interpolation::LinearInterpolator line({0.0, 1.0}, {1.0, 3.0});
     if (line.evaluate(0.5) != 2.0) {
         return 6;
+    }
+
+    auto lagrange = MatCal::Interpolation::interpolate_lagrange({{0.0, 1.0}, {1.0, 3.0}});
+    if (lagrange.evaluate(0.5) != 2.0) {
+        return 9;
+    }
+
+    auto nonlinear = MatCal::Nonlinear::solve_newton_system(
+        [](const std::vector<double>& x) { return std::vector<double>{x[0] - 2.0}; },
+        {0.0},
+        [](const std::vector<double>&) {
+            MatCal::Linalg::DenseMatrix j(1, 1);
+            j(0, 0) = 1.0;
+            return j;
+        });
+    if (!nonlinear.success()) {
+        return 10;
+    }
+
+    auto fit = MatCal::LeastSquares::fit_polynomial_degree(1, {0.0, 1.0}, {1.0, 3.0});
+    if (!fit.success()) {
+        return 11;
     }
 
     auto integral = MatCal::Calculus::integrate_newton_cotes([](double x) { return x; }, 0.0, 1.0, 1);

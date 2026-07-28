@@ -43,6 +43,7 @@ target_include_directories(matcal_interpolation
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
+target_link_libraries(matcal_interpolation INTERFACE MatCal::Polynomial)
 set_target_properties(matcal_interpolation PROPERTIES EXPORT_NAME Interpolation)
 
 add_library(matcal_calculus INTERFACE)
@@ -67,6 +68,28 @@ target_include_directories(matcal_ode
 )
 set_target_properties(matcal_ode PROPERTIES EXPORT_NAME ODE)
 
+add_library(matcal_nonlinear INTERFACE)
+add_library(MatCal::Nonlinear ALIAS matcal_nonlinear)
+
+target_compile_features(matcal_nonlinear INTERFACE cxx_std_20)
+target_include_directories(matcal_nonlinear
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_nonlinear PROPERTIES EXPORT_NAME Nonlinear)
+
+add_library(matcal_least_squares INTERFACE)
+add_library(MatCal::LeastSquares ALIAS matcal_least_squares)
+
+target_compile_features(matcal_least_squares INTERFACE cxx_std_20)
+target_include_directories(matcal_least_squares
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_least_squares PROPERTIES EXPORT_NAME LeastSquares)
+
 add_library(matcal_legacy INTERFACE)
 add_library(MatCal::Legacy ALIAS matcal_legacy)
 
@@ -82,6 +105,8 @@ target_link_libraries(matcal_legacy INTERFACE
     MatCal::Interpolation
     MatCal::Calculus
     MatCal::ODE
+    MatCal::Nonlinear
+    MatCal::LeastSquares
 )
 set_target_properties(matcal_legacy PROPERTIES EXPORT_NAME Legacy)
 
@@ -99,6 +124,8 @@ target_include_directories(matcal_linalg
         $<INSTALL_INTERFACE:include>
 )
 set_target_properties(matcal_linalg PROPERTIES EXPORT_NAME Linalg)
+target_link_libraries(matcal_nonlinear INTERFACE MatCal::Linalg)
+target_link_libraries(matcal_least_squares INTERFACE MatCal::Linalg MatCal::Polynomial)
 
 function(matcal_configure_test_target target_name)
     if(MATCAL_ENABLE_WARNINGS)
@@ -132,7 +159,7 @@ endfunction()
 
 matcal_configure_linalg_target(matcal_linalg)
 
-install(TARGETS matcal_polynomial matcal_roots matcal_interpolation matcal_calculus matcal_ode matcal_legacy matcal_linalg
+install(TARGETS matcal_polynomial matcal_roots matcal_interpolation matcal_calculus matcal_ode matcal_nonlinear matcal_least_squares matcal_legacy matcal_linalg
     EXPORT MatCalTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -247,6 +274,20 @@ if(BUILD_TESTING)
         add_test(NAME ${target_name} COMMAND ${target_name})
     endfunction()
 
+    function(matcal_add_nonlinear_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Nonlinear MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
+    function(matcal_add_least_squares_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::LeastSquares MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
     matcal_add_polynomial_test(matcal_polynomial_tests
         tests/polynomial_tests.cpp
     )
@@ -270,11 +311,16 @@ if(BUILD_TESTING)
         tests/interpolation_tests.cpp
     )
 
+    matcal_add_interpolation_test(matcal_interpolation_remaining_tests
+        tests/interpolation_remaining_tests.cpp
+    )
+
     add_executable(matcal_roots_interpolation_public_header_tests
         tests/roots_interpolation_public_headers_main.cpp
         tests/header_roots_self_contained.cpp
         tests/header_linear_interpolator_self_contained.cpp
         tests/header_cubic_spline_self_contained.cpp
+        tests/header_polynomial_interpolation_self_contained.cpp
     )
     target_link_libraries(matcal_roots_interpolation_public_header_tests PRIVATE
         MatCal::Roots
@@ -287,6 +333,7 @@ if(BUILD_TESTING)
         tests/roots_interpolation_multi_tu_main.cpp
         tests/roots_multi_tu_a.cpp
         tests/interpolation_multi_tu_b.cpp
+        tests/interpolation_remaining_multi_tu_c.cpp
     )
     target_link_libraries(matcal_roots_interpolation_multi_tu_tests PRIVATE
         MatCal::Roots
@@ -347,6 +394,65 @@ if(BUILD_TESTING)
     target_link_libraries(matcal_ode_only_consumer_tests PRIVATE MatCal::ODE)
     matcal_configure_test_target(matcal_ode_only_consumer_tests)
     add_test(NAME matcal_ode_only_consumer_tests COMMAND matcal_ode_only_consumer_tests)
+
+    matcal_add_nonlinear_test(matcal_nonlinear_tests
+        tests/nonlinear_tests.cpp
+    )
+
+    matcal_add_least_squares_test(matcal_least_squares_tests
+        tests/least_squares_tests.cpp
+    )
+
+    add_executable(matcal_nonlinear_least_squares_interpolation_public_header_tests
+        tests/nonlinear_least_squares_interpolation_public_headers_main.cpp
+        tests/header_nonlinear_self_contained.cpp
+        tests/header_least_squares_self_contained.cpp
+        tests/header_polynomial_interpolation_self_contained.cpp
+    )
+    target_link_libraries(matcal_nonlinear_least_squares_interpolation_public_header_tests PRIVATE
+        MatCal::Nonlinear
+        MatCal::LeastSquares
+        MatCal::Interpolation
+    )
+    matcal_configure_test_target(matcal_nonlinear_least_squares_interpolation_public_header_tests)
+    add_test(NAME matcal_nonlinear_least_squares_interpolation_public_header_tests
+        COMMAND matcal_nonlinear_least_squares_interpolation_public_header_tests)
+
+    add_executable(matcal_nonlinear_least_squares_interpolation_multi_tu_tests
+        tests/nonlinear_least_squares_interpolation_multi_tu_main.cpp
+        tests/nonlinear_multi_tu_a.cpp
+        tests/least_squares_multi_tu_b.cpp
+        tests/interpolation_remaining_multi_tu_c.cpp
+    )
+    target_link_libraries(matcal_nonlinear_least_squares_interpolation_multi_tu_tests PRIVATE
+        MatCal::Nonlinear
+        MatCal::LeastSquares
+        MatCal::Interpolation
+    )
+    matcal_configure_test_target(matcal_nonlinear_least_squares_interpolation_multi_tu_tests)
+    add_test(NAME matcal_nonlinear_least_squares_interpolation_multi_tu_tests
+        COMMAND matcal_nonlinear_least_squares_interpolation_multi_tu_tests)
+
+    add_executable(matcal_nonlinear_only_consumer_tests
+        tests/nonlinear_only_consumer.cpp
+    )
+    target_link_libraries(matcal_nonlinear_only_consumer_tests PRIVATE MatCal::Nonlinear)
+    matcal_configure_test_target(matcal_nonlinear_only_consumer_tests)
+    add_test(NAME matcal_nonlinear_only_consumer_tests COMMAND matcal_nonlinear_only_consumer_tests)
+
+    add_executable(matcal_least_squares_only_consumer_tests
+        tests/least_squares_only_consumer.cpp
+    )
+    target_link_libraries(matcal_least_squares_only_consumer_tests PRIVATE MatCal::LeastSquares)
+    matcal_configure_test_target(matcal_least_squares_only_consumer_tests)
+    add_test(NAME matcal_least_squares_only_consumer_tests COMMAND matcal_least_squares_only_consumer_tests)
+
+    add_executable(matcal_interpolation_only_consumer_tests
+        tests/interpolation_only_consumer.cpp
+    )
+    target_link_libraries(matcal_interpolation_only_consumer_tests PRIVATE MatCal::Interpolation)
+    matcal_configure_test_target(matcal_interpolation_only_consumer_tests)
+    add_test(NAME matcal_interpolation_only_consumer_tests COMMAND matcal_interpolation_only_consumer_tests)
 
     matcal_add_linalg_test(matcal_linalg_vector_tests
         tests/linalg/vector_tests.cpp

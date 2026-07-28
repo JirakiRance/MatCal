@@ -37,7 +37,7 @@ struct SolverResult {
 
 Do not encode failure only through stdout or magic values such as `error = -1`.
 
-M1 `MatCal::Linalg` solvers return `SolverResult` for ordinary numerical failure. M4/M5 scalar numerical cores follow the same direction with structured result objects. Bounds errors, ragged matrix construction, size overflow, invalid object construction, and legacy compatibility wrappers may throw exceptions.
+M1 `MatCal::Linalg` solvers return `SolverResult` for ordinary numerical failure. M4/M5/M6 numerical cores follow the same direction with structured result objects. Bounds errors, ragged matrix construction, size overflow, invalid object construction, and legacy compatibility wrappers may throw exceptions.
 
 ## Const-Correctness
 
@@ -77,6 +77,14 @@ Legacy signatures frequently use non-const references even when the function cop
 - `MatCal::ODE` accepts RHS callables at the call boundary and does not retain them after stepping or integration.
 - ODE states and trajectories are value-owned `std::vector<double>` containers.
 - Legacy ODE and PT-style RK4 wrappers adapt their old callable shapes to the new value-state core.
+
+## M6 Nonlinear, Least-Squares, and Interpolation Ownership
+
+- `MatCal::Nonlinear` accepts residual and Jacobian callables at the call boundary and does not retain them after the solve returns.
+- `NonlinearResult` owns its solution, diagnostics, and metrics. Numerical failure returns no partial solution.
+- `MatCal::LeastSquares` owns result coefficients, selected degrees, normal matrix, right-hand side, polynomial, diagnostics, and metrics.
+- `MatCal::Interpolation` polynomial interpolation functions return owning `Polynomial` values and, for Newton methods, owning divided-difference tables.
+- Legacy interpolation facades convert these owning polynomial values back to `QinJiuShao` while preserving old getter shapes.
 
 ## Printing and Diagnostics
 

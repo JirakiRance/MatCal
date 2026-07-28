@@ -26,7 +26,7 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - Header-only definitions previously had ODR/multiple-definition risk; M0 marks known non-template definitions `inline`.
 - Many APIs use non-const references for inputs that are not intentionally mutated.
 - Many dynamic casts assume `toNormalMatrix()` returns `Matrix`; several are checked, but not all.
-- Core code prints to stdout in legacy `show()` helpers and `NewtonForEquations` validation paths.
+- Core code prints to stdout in legacy `show()` helpers. M6 removed the `NewtonForEquations` validation-path stdout from the migrated solve path.
 - Sparse storage is triplet/vector based with linear lookup; duplicate triplets are not merged by the constructor.
 - Fixed absolute tolerances dominate numerical decisions.
 - No thread-safety contract exists. Independent objects are generally usable independently; shared mutable objects are not synchronized.
@@ -66,10 +66,10 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 ## M4 Roots and Interpolation Migration Notes
 
-- Legacy scalar root classes now delegate to `MatCal::Roots`. `NewtonForEquations` remains legacy-only and still uses Legacy Matrix and stdout in one validation path.
+- Legacy scalar root classes now delegate to `MatCal::Roots`.
 - Bisection no longer accepts a tiny absolute residual alone as endpoint success. This fixes scaled-function false positives.
 - Legacy `LinearInsert` and `CubicSpline` now delegate to `MatCal::Interpolation`.
-- `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite` remain legacy-only after M4.
+- M6 migrates `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite`.
 
 ## M5 Calculus and ODE Migration Notes
 
@@ -79,4 +79,13 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - `Romberg` now reports non-convergence through the legacy throwing path instead of returning an error estimate as a successful integral value.
 - Legacy `ODE::SimpleEuler`, `ODE::Euler`, `ODE::RungeKutta_44`, and PT-style `Integrate::RK4::step/step2` now delegate to `MatCal::ODE`.
 - Legacy ODE table APIs still require positive `h`; the new `MatCal::ODE` core allows negative `dt` by option for backward stepping.
-- `Least_Square`, `NewtonForEquations`, multivariable derivative helpers, and non-migrated interpolation families remain legacy-only.
+- Multivariable derivative helpers remain legacy-only.
+
+## M6 Nonlinear, Least-Squares, and Interpolation Migration Notes
+
+- Legacy `NewtonForEquations::solve` now delegates to `MatCal::Nonlinear`. It no longer returns the last finite iterate as a pseudo root on singular-Jacobian or numerical failure; the legacy result has `converged=false` and an empty `root`.
+- `MatCal::Nonlinear` currently provides undamped Newton only. No line search, trust region, sparse Jacobian, or overdetermined system solve is provided.
+- Legacy `Least_Square::solve` overloads now delegate to `MatCal::LeastSquares`. The core keeps normal equations for compatibility, so ill-conditioned fits remain a numerical limitation. QR/SVD are future work.
+- M6 least-squares weights are strictly positive. Code that wants zero-weight masking should filter samples or use a future explicitly documented masking API.
+- Legacy `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite` now delegate to `MatCal::Interpolation`.
+- Duplicate or non-finite interpolation nodes are rejected by the new core. Code that accidentally depended on duplicate-node division by zero must clean inputs before calling.

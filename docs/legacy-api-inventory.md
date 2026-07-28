@@ -109,6 +109,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - `Hermite`: constructors, `reconstruct`, `calculate`, `getDegree`, `getPoly`.
 - `CubicSpline`: constructors, `reconstruct`, `calculate`, `getXs`, `getYs`, `getM`.
 - `LinearInsert`: constructors from pair list or `xs/ys`, `reconstruct`, `calculate`, `getXs`, `getYs`.
+- M6 note: all listed interpolation classes now keep these legacy signatures while delegating their core construction/evaluation formulas to `MatCal::Interpolation`.
 
 ## `MatCal::Algorithm::Iteration`
 
@@ -117,6 +118,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - `Newton`: `solve`, `solve_downhill`, `Result`.
 - `Secant`: `solve_two_point`, `solve_one_point`, `Result`.
 - `NewtonForEquations`: `using Function = std::function<double(const std::vector<double>&)>`, `Result`, `solve`.
+- M6 note: scalar classes delegate to `MatCal::Roots`; `NewtonForEquations::solve` now delegates to `MatCal::Nonlinear`.
 
 ## `MatCal::Algorithm::Basics`
 
@@ -128,6 +130,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - `NumericalIntegration`: `Instant`, `NewtonCotes`, `CompositeNewtonCotes`, `Romberg`, overloads for discrete data, `CotesSheet`.
 - `ODE`: `SimpleEuler`, `Euler`, `RungeKutta_44`.
 - `Integrate::RK4`: `step`, `step2`; this area is explicitly marked in source as PT-specific legacy support.
+- M6 note: `Least_Square::solve` overloads now delegate to `MatCal::LeastSquares`. Multivariable derivative helpers `pF_px` and `dF_dx` remain legacy-only.
 
 ## Possible PT/External Dependency Surface
 

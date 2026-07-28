@@ -14,4 +14,6 @@ target_link_libraries(matcal_package_consumer PRIVATE
     MatCal::Interpolation
     MatCal::Calculus
     MatCal::ODE
+    MatCal::Nonlinear
+    MatCal::LeastSquares
 )

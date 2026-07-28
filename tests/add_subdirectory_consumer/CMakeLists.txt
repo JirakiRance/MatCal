@@ -15,4 +15,6 @@ target_link_libraries(matcal_add_subdirectory_consumer
         MatCal::Legacy
         MatCal::Calculus
         MatCal::ODE
+        MatCal::Nonlinear
+        MatCal::LeastSquares
 )

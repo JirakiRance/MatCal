@@ -95,6 +95,18 @@ M5 continues the compatibility-facade strategy for calculus and ODE routines in 
 - `Romberg` no longer returns the last estimated error as a pseudo integral when convergence fails. Legacy callers receive an exception through the old throwing style.
 - Source consumers should recompile to pick up the M5 header-only changes. ABI stability and compatibility with old precompiled binaries are still not promised.
 
+## M6 Legacy Migration Policy
+
+M6 continues the compatibility-facade strategy for multivariable nonlinear solves, polynomial least squares, and remaining classic interpolation classes.
+
+- `NewtonForEquations::solve` keeps the legacy class name, function name, argument order, defaults, and result struct. It now delegates to `MatCal::Nonlinear`.
+- Numerical failure in `NewtonForEquations` no longer returns the last iterate as a pseudo root. Source compatibility is preserved, but callers should check `converged` before reading `root`.
+- All existing `Least_Square::solve` overloads keep their public signatures and return `Result_least_square`. They now delegate to `MatCal::LeastSquares`.
+- The legacy `degree > 0` rule remains in `Least_Square`; the new core can fit degree-0 constants.
+- `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite` keep constructors, `calculate`, `reconstruct`, `getPoly`, and Newton table getters. They now delegate to `MatCal::Interpolation`.
+- New interpolation validation rejects duplicate and non-finite nodes instead of allowing denominator-zero or NaN propagation.
+- Source consumers should recompile to pick up M6 header-only changes. ABI stability and compatibility with old precompiled binaries are still not promised.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

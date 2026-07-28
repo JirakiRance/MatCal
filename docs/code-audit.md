@@ -134,3 +134,34 @@ Sanitizers were not run in this M0.1 pass.
 ## Warning Baseline
 
 See `docs/warning-baseline.md`. M0.1 intentionally fixes only warnings tied to the repaired bugs and safety contracts. Remaining warning families are preserved as documented legacy debt for M1 instead of being hidden by broad formatting or API churn.
+
+## M6 Migration Audit
+
+M6 reviewed `src/Iteration.hpp`, `src/Basics.hpp`, and `src/Insert.hpp` before changing migrated algorithms.
+
+Reused legacy formulas and loops:
+
+- `NewtonForEquations`: Newton system equation `J * delta = -F` and the finite-difference Jacobian idea.
+- `Least_Square`: weighted normal-equation assembly, selected polynomial terms, and polynomial output shape.
+- `LagrangeInsert`: Lagrange basis construction.
+- `NewtonInsert_Quotient`: lower-triangular divided-difference recurrence.
+- `NewtonInsert_Finite`: forward-difference table and finite-difference Newton basis.
+- `Hermite`: squared Lagrange-basis Hermite value/derivative formula.
+
+M6 repairs:
+
+- `NewtonForEquations` no longer prints callable validation failures to stdout and no longer returns a last iterate as a pseudo successful root.
+- `Least_Square` no longer hides rank-deficient or failed normal-equation solves behind placeholder success-like output.
+- Remaining classic interpolation families now reject duplicate or non-finite nodes before denominator division or polynomial construction.
+- `Insert.hpp` scalar `getDegree()` accessors no longer return `const int`.
+
+New targets and tests:
+
+- `MatCal::Nonlinear`
+- `MatCal::LeastSquares`
+- Extended `MatCal::Interpolation`
+- Nonlinear, least-squares, remaining interpolation oracle tests.
+- Legacy/new differential tests.
+- Public-header self-contained tests.
+- Multi-translation-unit tests.
+- Nonlinear-only, LeastSquares-only, Interpolation-only, Legacy, PT-style, package, and add-subdirectory consumers.

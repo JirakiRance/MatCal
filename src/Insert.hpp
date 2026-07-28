@@ -22,18 +22,57 @@ namespace MatCal {
     }
 }
 
+#include<cstddef>
+#include<limits>
+
 #include"QinJiuShao.hpp"
 #include"Matrix.hpp"
 #include"MatCal/Interpolation/CubicSpline.hpp"
 #include"MatCal/Interpolation/LinearInterpolator.hpp"
+#include"MatCal/Interpolation/PolynomialInterpolation.hpp"
 
 
 namespace MatCal::Algorithm::Insert{
 
+namespace detail {
+
+inline MatCal::Utils::QinJiuShao to_legacy_polynomial(const MatCal::Polynomial::Polynomial& polynomial) {
+    std::vector<std::pair<int, double>> terms;
+    for (const auto& term : polynomial.terms_descending()) {
+        if (term.first > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::length_error("legacy polynomial degree exceeds int range");
+        }
+        terms.emplace_back(static_cast<int>(term.first), term.second);
+    }
+    if (terms.empty()) {
+        terms.emplace_back(0, 0.0);
+    }
+    return MatCal::Utils::QinJiuShao(terms);
+}
+
+inline void fill_lower_sheet(MatCal::Utils::LowerTriangularMatrix& lower,
+                             const std::vector<std::vector<double>>& table) {
+    if (table.empty()) {
+        lower.resize(0, 0);
+        return;
+    }
+    if (table.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        throw std::length_error("legacy interpolation sheet exceeds int range");
+    }
+    const int n = static_cast<int>(table.size());
+    lower.resize(n, n);
+    for (int row = 0; row < n; ++row) {
+        for (int col = 0; col <= row; ++col) {
+            lower.set(row, col, table[static_cast<std::size_t>(row)][static_cast<std::size_t>(col)]);
+        }
+    }
+}
+
+} // namespace detail
+
 //Lagrange插值多项式Ln(x),基于秦九韶实现
 class LagrangeInsert {
     using Poly=MatCal::Utils::QinJiuShao;
-    using PolyNode=MatCal::Utils::QinJiuShaoNode;
 //构造和析构
 public:
     //默认构造
@@ -67,7 +106,7 @@ public:
         return this->poly.calculate(x);
     }
     //getter方法
-    const int getDegree()const {
+    int getDegree()const {
         return this->degree;
     }
     const Poly getPoly() const{
@@ -77,41 +116,12 @@ public:
 //内部维护的方法
 private:
     void construct_from_vector(std::vector<std::pair<double, double>>& data) {
-        if (data.size() < 2) {
-            throw std::invalid_argument("poly terms should at least >= 2!");
+        if (data.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::length_error("legacy Lagrange degree exceeds int range");
         }
-        this->degree = data.size() - 1;
-        //创建n+1个l_i(x)再相加
-        std::vector<Poly> li_x(this->degree+1);
-        for (int i = 0; i <= this->degree; ++i) {//li
-            //创建系数
-            double coee = data[i].second;
-            //创建主式(数字1)
-            Poly li({
-                { 0, 1 }
-                });
-            for (int j = 0; j <= this->degree; ++j) {
-                if (i == j)
-                    continue;
-                //除以系数
-                coee /= (data[i].first - data[j].first);
-                //乘以上式
-                li = li * Poly({
-                    { 1 , 1 }, { 0 , - data[j].first }
-                    });
-            }
-            //最后乘以系数
-            li = li * coee;
-            //加入li_x
-            li_x[i] = li;
-        }//li
-
-        //最后加起来
-        Poly Ln_x = *li_x.begin();
-        for (int i = 1; i <= this->degree; ++i) {
-            Ln_x = Ln_x + li_x[i];
-        }
-        this->poly = Ln_x;
+        auto polynomial = MatCal::Interpolation::interpolate_lagrange(data);
+        this->degree = static_cast<int>(data.size()) - 1;
+        this->poly = detail::to_legacy_polynomial(polynomial);
     }
 
 //内部维护的属性
@@ -151,23 +161,13 @@ public:
     void insertNewTerm(double X, double Y){
         if (x.empty())
             throw std::out_of_range("insertNewTerm: no existing nodes — call construct() with >=2 points first");
-        if (X == x.back())
-            throw std::invalid_argument("insertNewTerm: duplicate x value");
-        degree++;
-        int newSize = degree + 1;
-        x.push_back(X);
-        lower.resize(newSize,newSize);
-
-        int r = newSize - 1;
-        lower.set(r,0,Y);
-        lower.set(r,1,(Y - lower.get(r-1,0)) / (X - x[r-1]));
-
-        for(int j=2;j<newSize;j++){
-            lower.set(r,j,(lower.get(r,j-1) - lower.get(r-1,j-1)) / (x[r] - x[r-j]));
+        std::vector<std::pair<double, double>> data;
+        data.reserve(x.size() + 1);
+        for (std::size_t i = 0; i < x.size(); ++i) {
+            data.emplace_back(x[i], lower.get(static_cast<int>(i), 0));
         }
-
-        Poly pn(lower.get(r,r), x);
-        poly = poly + pn;
+        data.emplace_back(X, Y);
+        construct(data);
     }
 
     //getter方法
@@ -178,27 +178,14 @@ public:
 //内部维护的方法
 private:
     void construct(std::vector<std::pair<double,double>>& data){
-        int n=data.size();
-        if(n<2) throw std::invalid_argument("Need >=2 points");
-
-        degree = n-1;
-        x.resize(n);
-        for(int i=0;i<n;i++) x[i]=data[i].first;
-
-        lower.resize(n,n);
-        for(int j=0;j<n;j++) lower.set(j,0,data[j].second);
-        for(int j=1;j<n;j++) lower.set(j,1,(lower.get(j,0)-lower.get(j-1,0))/(x[j]-x[j-1]));
-        for(int j=2;j<n;j++)
-            for(int i=j;i<n;i++)
-                lower.set(i,j,(lower.get(i,j-1)-lower.get(i-1,j-1))/(x[i]-x[i-j]));
-
-        Poly res = {{0,lower.get(0,0)}};
-        for(int i=1;i<n;i++){
-            std::vector<double> sub(x.begin(),x.begin()+i);
-            Poly pn(lower.get(i,i),sub);
-            res = res + pn;
+        if (data.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::length_error("legacy Newton divided-difference degree exceeds int range");
         }
-        poly = res;
+        auto result = MatCal::Interpolation::interpolate_newton_divided(data);
+        x = result.xs;
+        detail::fill_lower_sheet(lower, result.table);
+        degree = static_cast<int>(data.size()) - 1;
+        poly = detail::to_legacy_polynomial(result.polynomial);
     }
 //内部维护的属性
 private:
@@ -244,26 +231,13 @@ public:
     void insertNewTerm(double Y){
         if (degree < 1)
             throw std::out_of_range("insertNewTerm: insufficient base data — call construct(yData) with >=2 values first");
-        int newSize = degree + 2;
-        lower.resize(newSize,newSize);
-        int r = newSize - 1;
-        //第一列：新数据点
-        lower.set(r,0,Y);
-        //差分表更新 Δ, Δ², ...
-        for(int j=1;j<newSize;j++)
-            lower.set(r,j, lower.get(r,j-1) - lower.get(r-1,j-1));
-        //对应系数
-        double coe = lower.get(r,r);
-        double denom = 1;
-        for(int k=1;k<=r;k++) denom *= (h*k);
-        coe /= denom;
-        if(std::abs(coe)<QinJiuShaoNode::ZERO_THRESHOLD)
-            coe = QinJiuShaoNode::ZERO_THRESHOLD*1.00001;
-        //构造基函数 (X - x0)(X - (x0+h))...(长度 r)
-        Poly pn = makeBasis(r, coe);
-        //加入多项式
-        poly = poly + pn;
-        degree++;
+        std::vector<double> yData;
+        yData.reserve(static_cast<std::size_t>(degree) + 2);
+        for (int i = 0; i <= degree; ++i) {
+            yData.push_back(lower.get(i, 0));
+        }
+        yData.push_back(Y);
+        construct(yData);
     }
 
     void reSet_X0(int x0){
@@ -282,45 +256,13 @@ private:
     // 构造：只传 Y，x = x0 + i*h
     //------------------------------------------------------------
     void construct(std::vector<double>& yData){
-        int n = yData.size();
-        if(n < 2) throw std::invalid_argument("Need >=2 points");
-        degree = n - 1;
-        //差分表初始化
-        lower.resize(n,n);
-        //第一列 = y 值
-        for(int i=0;i<n;i++)
-            lower.set(i,0,yData[i]);
-        //构造前向差分
-        for(int j=1;j<n;j++)
-            for(int i=j;i<n;i++)
-                lower.set(i,j, lower.get(i,j-1) - lower.get(i-1,j-1));
-        //--------------------------------------------------------
-        //构造多项式
-        //--------------------------------------------------------
-        Poly res = { {0, lower.get(0,0)} };
-        for(int i=1;i<n;i++){
-            double coe = lower.get(i,i);
-            double denom = 1;
-            for(int k=1;k<=i;k++) denom *= (h*k);
-            coe /= denom;
-            if(std::abs(coe)<QinJiuShaoNode::ZERO_THRESHOLD)
-                coe = QinJiuShaoNode::ZERO_THRESHOLD*1.00001;
-            Poly pn = makeBasis(i, coe);
-            res = res + pn;
+        if (yData.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::length_error("legacy Newton finite-difference degree exceeds int range");
         }
-        poly = res;
-    }
-
-    //------------------------------------------------------------
-    // 生成 Newton 等距节点基函数：
-    // (X - x0)(X - (x0+h))...(X - (x0+(n-1)h)) * coe
-    //------------------------------------------------------------
-    Poly makeBasis(int n, double coe) const {
-        std::vector<double> xs;
-        xs.reserve(n);
-        for(int i=0;i<n;i++)
-            xs.push_back(x0 + i*h);
-        return Poly(coe, xs);
+        auto result = MatCal::Interpolation::interpolate_newton_finite(h, x0, yData);
+        detail::fill_lower_sheet(lower, result.table);
+        degree = static_cast<int>(yData.size()) - 1;
+        poly = detail::to_legacy_polynomial(result.polynomial);
     }
 
 private:
@@ -366,7 +308,7 @@ public:
         return this->poly.calculate(x);
     }
     //getter方法
-    const int getDegree()const {
+    int getDegree()const {
         return this->degree;
     }
     const Poly getPoly() const{
@@ -378,87 +320,12 @@ private:
 void construct(std::vector<double>& xs,
                    std::vector<double>& ys,
                    std::vector<double>& dy_dxs) {
-        int n = static_cast<int>(xs.size());
-        if (n < 2 || ys.size() != xs.size() || dy_dxs.size() != xs.size()) {
-            throw std::invalid_argument(
-                "Hermite: vector size should be >=2 "
-                "and xs, ys, dy_dxs size must match!");
+        if (xs.size() > (static_cast<std::size_t>(std::numeric_limits<int>::max()) + 1) / 2) {
+            throw std::length_error("legacy Hermite degree exceeds int range");
         }
-
-        // 检查节点是否重复
-        for (int i = 0; i < n; ++i) {
-            for (int j = i + 1; j < n; ++j) {
-                if (std::abs(xs[i] - xs[j]) < PolyNode::ZERO_THRESHOLD) {
-                    throw std::invalid_argument(
-                        "Hermite: duplicated x nodes detected!");
-                }
-            }
-        }
-
-        // 理论次数：2n - 1
-        this->degree = 2 * n - 1;
-
-        // 1. 先构造标准拉格朗日基函数 l_i(x)
-        std::vector<Poly> li_x(n);
-        std::vector<double> li_prime_at_xi(n);  // l_i'(x_i)
-
-        for (int i = 0; i < n; ++i) {
-            // li(x) 从常数 1 开始
-            Poly li({{0, 1.0}});
-            double denom = 1.0;
-
-            for (int j = 0; j < n; ++j) {
-                if (i == j) continue;
-                double diff = xs[i] - xs[j];
-                if (std::abs(diff) < PolyNode::ZERO_THRESHOLD) {
-                    throw std::invalid_argument(
-                        "Hermite: xs[i] - xs[j] too small, "
-                        "nodes too close or duplicated.");
-                }
-                denom *= diff;
-                // 乘 (x - x_j)
-                li = li * Poly({{1, 1.0}, {0, -xs[j]}});
-            }
-
-            // li(x) = ∏(x - x_j) / ∏(x_i - x_j)
-            li = li * (1.0 / denom);
-            li_x[i] = li;
-
-            // 求导并在 x_i 处评价： l_i'(x_i)
-            Poly dli = li.derivative();
-            li_prime_at_xi[i] = dli.calculate(xs[i]);
-        }
-
-        // 2. 用 l_i(x) 和 l_i'(x_i) 构造 Hermite 基函数
-        //    H_i(x) = (1 - 2(x - x_i) l_i'(x_i)) [l_i(x)]^2
-        //    \hat{H}_i(x) = (x - x_i)[l_i(x)]^2
-        Poly result;        // 默认构造应为 0 多项式
-        bool firstTerm = true;
-
-        for (int i = 0; i < n; ++i) {
-            Poly X_minus_xi({{1, 1.0}, {0, -xs[i]}});
-            Poly li_sq = li_x[i] * li_x[i];
-
-            // H_i(x)
-            Poly Hi = Poly({{0, 1.0}});                     // 1
-            Hi = Hi - (2.0 * li_prime_at_xi[i]) * X_minus_xi;  // 1 - 2 l_i'(x_i)(x - x_i)
-            Hi = Hi * li_sq;
-
-            // \hat{H}_i(x)
-            Poly Htilde = X_minus_xi * li_sq;
-
-            // y_i * H_i(x) + y'_i * \hat{H}_i(x)
-            Poly term = Hi * ys[i] + Htilde * dy_dxs[i];
-
-            if (firstTerm) {
-                result = term;
-                firstTerm = false;
-            } else {
-                result = result + term;
-            }
-        }
-
-        this->poly = result;
+        auto polynomial = MatCal::Interpolation::interpolate_hermite(xs, ys, dy_dxs);
+        this->degree = static_cast<int>(2 * xs.size()) - 1;
+        this->poly = detail::to_legacy_polynomial(polynomial);
     }
 
 //内部维护的属性
