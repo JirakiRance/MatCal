@@ -12,4 +12,6 @@ target_link_libraries(matcal_package_consumer PRIVATE
     MatCal::Polynomial
     MatCal::Roots
     MatCal::Interpolation
+    MatCal::Calculus
+    MatCal::ODE
 )

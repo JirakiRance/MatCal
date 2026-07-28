@@ -24,10 +24,10 @@ Stage M3 starts treating Legacy as a source of reviewed algorithms rather than a
 | Interpolation | `LinearInsert`, `LagrangeInsert`, `NewtonInsert_*`, `CubicSpline`, `Hermite` | `src/Insert.hpp` | LinearInsert and natural CubicSpline migrated in M4; other interpolation families remain legacy-only | linear segment formula, binary interval search, natural spline tridiagonal equation, spline evaluation formula | strict finite/input checks, explicit extrapolation policy, no legacy matrix dependency for spline solve | `MatCal::Interpolation` | Yes for `LinearInsert` and `CubicSpline` | oracle, legacy differential, PT-style consumer | partially migrated |
 | Scalar iteration | `Bisection`, `Picard`, `Newton`, `Secant` | `src/Iteration.hpp` | M4 migrated scalar loops and added structured failure states; bisection no longer accepts tiny scaled residual alone as endpoint success | bisection/Picard/Aitken/Newton/downhill/Secant formulas | finite checks, derivative/denominator zero, bracket checks, max-iteration status | `MatCal::Roots` | Yes for scalar root classes | oracle, failure, differential, header, multi-TU | migrated |
 | Newton equations | `NewtonForEquations` | `src/Iteration.hpp` | Uses legacy Matrix, dynamic cast, fallback policy | finite-difference Jacobian idea | structured diagnostics, linalg direct solve, no stdout | none yet | No | legacy inventory only | planned |
-| Differentiation | `Derivative::*` | `src/Basics.hpp` | Finite-difference helpers exist | central-difference formulas | finite checks, step validation | none yet | No | legacy inventory only | planned |
+| Differentiation | `Derivative::*` | `src/Basics.hpp` | `dy_dx` and `dy_dx_center` migrated in M5; multivariable helpers remain legacy-only | forward and centered finite-difference formulas | finite checks, step validation | `MatCal::Calculus` | Yes for scalar `dy_dx` and `dy_dx_center` | oracle, invalid input, legacy differential | partially migrated |
 | Least squares | `Least_Square::solve` | `src/Basics.hpp` | Uses normal equations / legacy matrix | polynomial basis setup | conditioning/status, linalg solve | none yet | No | legacy inventory only | planned |
-| Integration | `NumericalIntegration::*` | `src/Basics.hpp` | `Instant` fixed in M0.1; Newton-Cotes/Romberg still old | quadrature formulas | callable/finite contracts across all methods | none yet | No | Instant regression | characterized |
-| ODE / RK4 | `ODE::SimpleEuler`, `Euler`, `RungeKutta_44` | `src/Basics.hpp` | RK4 stage formula exists; not yet extracted | stage formula and output shape | vector state API, dt/finite checks | none yet | No | legacy inventory only | planned |
+| Integration | `NumericalIntegration::*` | `src/Basics.hpp` | M5 migrates Instant, Newton-Cotes, Composite Newton-Cotes, and Romberg; discrete-data overload forwards through LinearInsert facade | left rectangle, closed Newton-Cotes weights, composite loop, Romberg trapezoid/Richardson loop | signed interval contract, non-finite checks, non-convergence status | `MatCal::Calculus` | Yes for callable overloads | oracle, invalid input, legacy differential | migrated |
+| ODE / RK4 | `ODE::SimpleEuler`, `Euler`, `RungeKutta_44`, `Integrate::RK4::step/step2` | `src/Basics.hpp` | M5 migrates simple Euler, improved Euler, classic RK4, and PT-style RK4 helpers | Euler formulas, RK4 four-stage formula, legacy trajectory row shape | vector-state API, finite checks, RHS size checks, structured diagnostics | `MatCal::ODE` | Yes | oracle, PT-style differential, legacy differential | migrated |
 
 ## M3 Completed Migration
 
@@ -47,3 +47,9 @@ The old string formatting, `show()`, sparse descending node list, constructors, 
 `MatCal::Roots` now owns scalar root-finding loops for bisection, Picard, Picard-Aitken, Newton, downhill Newton, and secant variants. Legacy scalar classes delegate to the new core.
 
 `MatCal::Interpolation` now owns linear interpolation and natural cubic spline interpolation. Legacy `LinearInsert` and `CubicSpline` delegate to the new core while preserving PT-sensitive old names, constructors, `calculate`, and getters.
+
+## M5 Completed Migration
+
+`MatCal::Calculus` now owns scalar forward/central finite differences plus left-rectangle, Newton-Cotes, composite Newton-Cotes, and Romberg integration. Legacy scalar derivative and callable integration APIs delegate to this core.
+
+`MatCal::ODE` now owns simple Euler, improved Euler, and classic RK4 stepping/integration over value-owned state vectors. Legacy `ODE::*` table APIs and PT-sensitive `Integrate::RK4::step/step2` delegate to the shared RK4/Euler core.

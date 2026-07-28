@@ -11,7 +11,6 @@ This document records warning status after M0.1. It is a compatibility tool, not
 
 - Some loops compare signed `int` indices with unsigned `size_t` container sizes.
 - `Insert.hpp` has `const` on a scalar return type.
-- `CompositeNewtonCotes` keeps an unused local in one path.
 - `solve_Linear_System` is an inline legacy helper that may appear unused in focused test builds.
 
 ## M1 Handling
@@ -32,3 +31,11 @@ Legacy warning debt remains documented here and is not required to be zeroed bef
 
 - `QinJiuShao` now declares copy/move assignment explicitly. This removes the deprecated implicit copy-assignment warning source without changing the public class name or constructor set.
 - The migrated `Picard::solve` path no longer owns the old unused `last_delta` local.
+
+## Fixed in M5
+
+- `CompositeNewtonCotes` no longer owns the old independent loop with an unused `seg_b` local; it delegates to `MatCal::Calculus`.
+
+## M5 Remaining Legacy Warnings
+
+- Multivariable derivative helpers and least-squares paths in `Basics.hpp` still compare old `int` dimensions with container `size()`. They remain legacy-only after M5.

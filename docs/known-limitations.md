@@ -70,4 +70,13 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - Bisection no longer accepts a tiny absolute residual alone as endpoint success. This fixes scaled-function false positives.
 - Legacy `LinearInsert` and `CubicSpline` now delegate to `MatCal::Interpolation`.
 - `LagrangeInsert`, `NewtonInsert_Quotient`, `NewtonInsert_Finite`, and `Hermite` remain legacy-only after M4.
-- Integration beyond `Instant` and RK4 remain legacy-only.
+
+## M5 Calculus and ODE Migration Notes
+
+- Legacy scalar `Derivative::dy_dx` and `Derivative::dy_dx_center` now delegate to `MatCal::Calculus`; `pF_px` and `dF_dx` remain legacy-only.
+- Legacy `NumericalIntegration::Instant`, `NewtonCotes`, `CompositeNewtonCotes`, and callable `Romberg` now delegate to `MatCal::Calculus`.
+- `Instant` now supports reverse intervals with signed results. Code that depended on reverse intervals throwing should check intervals before calling.
+- `Romberg` now reports non-convergence through the legacy throwing path instead of returning an error estimate as a successful integral value.
+- Legacy `ODE::SimpleEuler`, `ODE::Euler`, `ODE::RungeKutta_44`, and PT-style `Integrate::RK4::step/step2` now delegate to `MatCal::ODE`.
+- Legacy ODE table APIs still require positive `h`; the new `MatCal::ODE` core allows negative `dt` by option for backward stepping.
+- `Least_Square`, `NewtonForEquations`, multivariable derivative helpers, and non-migrated interpolation families remain legacy-only.

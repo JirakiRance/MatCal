@@ -45,6 +45,28 @@ target_include_directories(matcal_interpolation
 )
 set_target_properties(matcal_interpolation PROPERTIES EXPORT_NAME Interpolation)
 
+add_library(matcal_calculus INTERFACE)
+add_library(MatCal::Calculus ALIAS matcal_calculus)
+
+target_compile_features(matcal_calculus INTERFACE cxx_std_20)
+target_include_directories(matcal_calculus
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_calculus PROPERTIES EXPORT_NAME Calculus)
+
+add_library(matcal_ode INTERFACE)
+add_library(MatCal::ODE ALIAS matcal_ode)
+
+target_compile_features(matcal_ode INTERFACE cxx_std_20)
+target_include_directories(matcal_ode
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+set_target_properties(matcal_ode PROPERTIES EXPORT_NAME ODE)
+
 add_library(matcal_legacy INTERFACE)
 add_library(MatCal::Legacy ALIAS matcal_legacy)
 
@@ -54,7 +76,13 @@ target_include_directories(matcal_legacy
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(matcal_legacy INTERFACE MatCal::Polynomial MatCal::Roots MatCal::Interpolation)
+target_link_libraries(matcal_legacy INTERFACE
+    MatCal::Polynomial
+    MatCal::Roots
+    MatCal::Interpolation
+    MatCal::Calculus
+    MatCal::ODE
+)
 set_target_properties(matcal_legacy PROPERTIES EXPORT_NAME Legacy)
 
 add_library(matcal_linalg
@@ -104,7 +132,7 @@ endfunction()
 
 matcal_configure_linalg_target(matcal_linalg)
 
-install(TARGETS matcal_polynomial matcal_roots matcal_interpolation matcal_legacy matcal_linalg
+install(TARGETS matcal_polynomial matcal_roots matcal_interpolation matcal_calculus matcal_ode matcal_legacy matcal_linalg
     EXPORT MatCalTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -205,6 +233,20 @@ if(BUILD_TESTING)
         add_test(NAME ${target_name} COMMAND ${target_name})
     endfunction()
 
+    function(matcal_add_calculus_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::Calculus MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
+    function(matcal_add_ode_test target_name)
+        add_executable(${target_name} ${ARGN})
+        target_link_libraries(${target_name} PRIVATE MatCal::ODE MatCal::Legacy)
+        matcal_configure_test_target(${target_name})
+        add_test(NAME ${target_name} COMMAND ${target_name})
+    endfunction()
+
     matcal_add_polynomial_test(matcal_polynomial_tests
         tests/polynomial_tests.cpp
     )
@@ -259,6 +301,52 @@ if(BUILD_TESTING)
     target_link_libraries(matcal_pt_style_consumer_tests PRIVATE MatCal::Legacy)
     matcal_configure_test_target(matcal_pt_style_consumer_tests)
     add_test(NAME matcal_pt_style_consumer_tests COMMAND matcal_pt_style_consumer_tests)
+
+    matcal_add_calculus_test(matcal_calculus_tests
+        tests/calculus_tests.cpp
+    )
+
+    matcal_add_ode_test(matcal_ode_tests
+        tests/ode_tests.cpp
+    )
+
+    add_executable(matcal_calculus_ode_public_header_tests
+        tests/calculus_ode_public_headers_main.cpp
+        tests/header_calculus_self_contained.cpp
+        tests/header_ode_self_contained.cpp
+    )
+    target_link_libraries(matcal_calculus_ode_public_header_tests PRIVATE
+        MatCal::Calculus
+        MatCal::ODE
+    )
+    matcal_configure_test_target(matcal_calculus_ode_public_header_tests)
+    add_test(NAME matcal_calculus_ode_public_header_tests COMMAND matcal_calculus_ode_public_header_tests)
+
+    add_executable(matcal_calculus_ode_multi_tu_tests
+        tests/calculus_ode_multi_tu_main.cpp
+        tests/calculus_multi_tu_a.cpp
+        tests/ode_multi_tu_b.cpp
+    )
+    target_link_libraries(matcal_calculus_ode_multi_tu_tests PRIVATE
+        MatCal::Calculus
+        MatCal::ODE
+    )
+    matcal_configure_test_target(matcal_calculus_ode_multi_tu_tests)
+    add_test(NAME matcal_calculus_ode_multi_tu_tests COMMAND matcal_calculus_ode_multi_tu_tests)
+
+    add_executable(matcal_calculus_only_consumer_tests
+        tests/calculus_only_consumer.cpp
+    )
+    target_link_libraries(matcal_calculus_only_consumer_tests PRIVATE MatCal::Calculus)
+    matcal_configure_test_target(matcal_calculus_only_consumer_tests)
+    add_test(NAME matcal_calculus_only_consumer_tests COMMAND matcal_calculus_only_consumer_tests)
+
+    add_executable(matcal_ode_only_consumer_tests
+        tests/ode_only_consumer.cpp
+    )
+    target_link_libraries(matcal_ode_only_consumer_tests PRIVATE MatCal::ODE)
+    matcal_configure_test_target(matcal_ode_only_consumer_tests)
+    add_test(NAME matcal_ode_only_consumer_tests COMMAND matcal_ode_only_consumer_tests)
 
     matcal_add_linalg_test(matcal_linalg_vector_tests
         tests/linalg/vector_tests.cpp

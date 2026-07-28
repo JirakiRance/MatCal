@@ -37,7 +37,7 @@ struct SolverResult {
 
 Do not encode failure only through stdout or magic values such as `error = -1`.
 
-M1 `MatCal::Linalg` solvers return `SolverResult` for ordinary numerical failure. Bounds errors, ragged matrix construction, size overflow, and invalid object construction may throw exceptions.
+M1 `MatCal::Linalg` solvers return `SolverResult` for ordinary numerical failure. M4/M5 scalar numerical cores follow the same direction with structured result objects. Bounds errors, ragged matrix construction, size overflow, invalid object construction, and legacy compatibility wrappers may throw exceptions.
 
 ## Const-Correctness
 
@@ -69,6 +69,14 @@ Legacy signatures frequently use non-const references even when the function cop
 - `RootResult` owns its diagnostic, metrics, and optional iteration series.
 - `MatCal::Interpolation::LinearInterpolator` and `CubicSpline` own their node and coefficient storage.
 - Legacy `LinearInsert` and `CubicSpline` keep old getters but mirror data owned by the new interpolation core.
+
+## M5 Calculus and ODE Ownership
+
+- `MatCal::Calculus` accepts scalar callables at the call boundary and does not retain them after evaluation.
+- `DerivativeResult` and `IntegrationResult` own their diagnostics, metrics, and optional Romberg table data.
+- `MatCal::ODE` accepts RHS callables at the call boundary and does not retain them after stepping or integration.
+- ODE states and trajectories are value-owned `std::vector<double>` containers.
+- Legacy ODE and PT-style RK4 wrappers adapt their old callable shapes to the new value-state core.
 
 ## Printing and Diagnostics
 

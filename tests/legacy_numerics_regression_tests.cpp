@@ -15,7 +15,8 @@ void instant_regressions() {
     std::function<double(double)> empty;
     expect_throw([&] { (void)NumericalIntegration::Instant(empty, 0.0, 1.0, 0.1); }, "Instant rejects empty callable");
     expect_throw([] { (void)NumericalIntegration::Instant([](double x) { return x; }, 0.0, 1.0, 0.0); }, "Instant rejects zero eps");
-    expect_throw([] { (void)NumericalIntegration::Instant([](double x) { return x; }, 1.0, 0.0, 0.1); }, "Instant rejects reversed interval");
+    double reverse_constant = NumericalIntegration::Instant([](double) { return 2.0; }, 1.0, 0.0, 0.1);
+    expect_near(reverse_constant, -2.0, 1e-12, "Instant preserves signed reversed interval");
     expect_throw([] { (void)NumericalIntegration::Instant([](double x) { return x; }, 0.0, 1.0, std::numeric_limits<double>::infinity()); }, "Instant rejects infinite eps");
     expect_throw([] { (void)NumericalIntegration::Instant([](double x) { return x; }, std::numeric_limits<double>::quiet_NaN(), 1.0, 0.1); }, "Instant rejects NaN interval");
 

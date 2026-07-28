@@ -22,5 +22,21 @@ int main() {
 
     auto root = MatCal::Algorithm::Iteration::Bisection::solve(
         [](double x) { return x * x - 4.0; }, 0.0, 3.0);
-    return root > 1.999 && root < 2.001 ? 0 : 4;
+    if (!(root > 1.999 && root < 2.001)) {
+        return 4;
+    }
+
+    double theta_out = 0.0;
+    double omega_out = 0.0;
+    MatCal::Algorithm::Basics::Integrate::RK4::step2(
+        [](double theta, double omega, double& dtheta, double& domega) {
+            dtheta = omega;
+            domega = -theta;
+        },
+        1.0,
+        0.0,
+        0.1,
+        theta_out,
+        omega_out);
+    return theta_out > 0.99 && theta_out < 1.0 && omega_out < 0.0 ? 0 : 5;
 }

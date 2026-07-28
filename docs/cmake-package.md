@@ -1,6 +1,6 @@
 # CMake Package
 
-M3 added installable CMake package metadata for MatCal. M4 extends the package exports to Roots and Interpolation.
+M3 added installable CMake package metadata for MatCal. M4 extends the package exports to Roots and Interpolation. M5 extends the package exports to Calculus and ODE.
 
 ## Build-Tree Use
 
@@ -17,6 +17,8 @@ M3 also exposes:
 target_link_libraries(app PRIVATE MatCal::Polynomial)
 target_link_libraries(app PRIVATE MatCal::Roots)
 target_link_libraries(app PRIVATE MatCal::Interpolation)
+target_link_libraries(app PRIVATE MatCal::Calculus)
+target_link_libraries(app PRIVATE MatCal::ODE)
 target_link_libraries(app PRIVATE MatCal::Legacy)
 ```
 
@@ -32,6 +34,8 @@ target_link_libraries(app PRIVATE
     MatCal::Polynomial
     MatCal::Roots
     MatCal::Interpolation
+    MatCal::Calculus
+    MatCal::ODE
 )
 ```
 
@@ -47,4 +51,4 @@ Installed files include:
 
 - The package does not promise ABI stability.
 - The default integration model is source build through CMake, not a precompiled binary.
-- SFL/FEM integration is still out of scope for M4.
+- SFL/FEM integration is still out of scope for M5.

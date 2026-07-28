@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores.
 
 ## Current Shape
 
@@ -11,8 +11,10 @@ MatCal now has compatibility and focused numerical targets:
 - `MatCal::Polynomial`: the M3 value-type polynomial core extracted from `QinJiuShao`.
 - `MatCal::Roots`: the M4 scalar root-finding core extracted from `Iteration.hpp`.
 - `MatCal::Interpolation`: the M4 interpolation core extracted from `Insert.hpp`.
+- `MatCal::Calculus`: the M5 finite-difference and quadrature core extracted from `Basics.hpp`.
+- `MatCal::ODE`: the M5 Euler/RK4 core extracted from `Basics.hpp`.
 
-`MatCal::Legacy` now depends on `MatCal::Polynomial`, `MatCal::Roots`, and `MatCal::Interpolation` for migrated algorithms. `MatCal::Linalg` remains independent from Legacy.
+`MatCal::Legacy` now depends on `MatCal::Polynomial`, `MatCal::Roots`, `MatCal::Interpolation`, `MatCal::Calculus`, and `MatCal::ODE` for migrated algorithms. `MatCal::Linalg` remains independent from Legacy.
 
 ## Direction
 
@@ -31,6 +33,8 @@ Public targets:
 - `MatCal::Polynomial`: 0.x development API for polynomial value operations.
 - `MatCal::Roots`: 0.x development API for scalar nonlinear solves.
 - `MatCal::Interpolation`: 0.x development API for interpolation.
+- `MatCal::Calculus`: 0.x development API for scalar differentiation and integration.
+- `MatCal::ODE`: 0.x development API for domain-neutral ODE stepping.
 
 Future public targets may include:
 
@@ -89,6 +93,14 @@ M4 adds:
 - `MatCal::Interpolation::LinearInterpolator` and natural `CubicSpline`.
 - Legacy delegation for `LinearInsert` and `CubicSpline`.
 - PT-style source consumer and package/add-subdirectory consumer checks.
+
+M5 adds:
+
+- `MatCal::Calculus` result/status contracts for scalar finite differences and quadrature.
+- Legacy delegation for `Derivative::dy_dx`, `Derivative::dy_dx_center`, `NumericalIntegration::Instant`, Newton-Cotes, composite Newton-Cotes, and Romberg.
+- `MatCal::ODE` result/status contracts for simple Euler, improved Euler, and RK4 over vector states.
+- Legacy delegation for `ODE::SimpleEuler`, `ODE::Euler`, `ODE::RungeKutta_44`, and PT-sensitive `Integrate::RK4::step/step2`.
+- CMake export and consumer checks for `MatCal::Calculus` and `MatCal::ODE`.
 
 ## Future Capabilities
 

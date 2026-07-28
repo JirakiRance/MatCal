@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -15,7 +15,7 @@ M0 records legacy behavior and direction. M1 adds the first independent linalg c
 ## M0.1 Clarified Contracts
 
 - `TridiagonalMatrix(0)` is allowed. Its lower, diagonal, and upper arrays are empty; solving against a `0 x k` right-hand side returns a `0 x k` matrix.
-- `NumericalIntegration::Instant` requires a non-empty callable, finite endpoints, finite positive `eps`, `a <= b`, and `eps <= b - a`. It uses a left-rectangle rule and clips the final step to avoid integrating beyond `b`.
+- `NumericalIntegration::Instant` requires a non-empty callable, finite endpoints, and finite positive `eps`. It uses a left-rectangle rule and clips the final step to avoid integrating beyond the endpoint. M5 allows reverse intervals and returns the signed integral; `a == b` returns exactly zero.
 - `OrthogonalPolynomials::Legendre(n)` uses the standard recurrence and is regression-tested against analytic `P0`, `P1`, `P2`, and `P3` values.
 - `determinant` copies its input, uses the existing row-pivoting elimination path, applies row-swap parity, and keeps the legacy singular path as an exception.
 - `QinJiuShao::toFunction()` captures coefficients by value. The callable observes the polynomial state at creation time and may outlive the original object.
@@ -139,3 +139,36 @@ Legacy `solveDetailed` functions map this contract back to old structs. Legacy t
 `LinearInterpolator` uses binary interval lookup and the legacy segment formula. Extrapolation is explicit: reject, clamp, or extrapolate. The new default is reject; legacy `LinearInsert` uses extrapolate for source behavior compatibility.
 
 `CubicSpline` is a natural cubic spline. Endpoint second derivatives are zero. The interior tridiagonal system and evaluation formula match the legacy `CubicSpline` implementation, but the new core uses an owned tridiagonal solve rather than Legacy Matrix dynamic polymorphism. For two nodes it degenerates to a line with zero second derivatives.
+
+## M5 Calculus Contract
+
+`MatCal::Calculus` rejects empty callables, non-finite coordinates, non-finite step sizes, non-positive finite-difference steps, invalid Newton-Cotes orders, invalid segment counts, and non-finite function values. New APIs return structured `CalculusDiagnostic` data instead of printing.
+
+Finite differences use the legacy formulas:
+
+```text
+forward: (f(x + h) - f(x)) / h
+central: (f(x + h/2) - f(x - h/2)) / h
+```
+
+No automatic optimal step-size selection is claimed.
+
+Integration contracts:
+
+- zero-length interval returns exactly `0`;
+- reverse interval returns the negative of the forward integral;
+- left-rectangle `Instant` keeps the legacy left-endpoint rule;
+- closed Newton-Cotes supports legacy orders 1 through 7;
+- Romberg reports `not_converged` when the tolerance is not reached instead of returning an error estimate as a pseudo integral.
+
+## M5 ODE Contract
+
+`MatCal::ODE` accepts value-owned vector states and RHS callables of the form `f(t, y) -> vector`. It rejects empty states, non-finite time/state/step values, RHS size mismatches, and non-finite RHS outputs with structured diagnostics.
+
+`rk4_step` uses the classic four-stage RK4 formula extracted from the legacy `ODE::RungeKutta_44` and PT-style `Integrate::RK4::step/step2` implementations. The new core allows negative `dt` for backward stepping by default; legacy table APIs still require positive `h`.
+
+Trajectory rows are owned and use the compatibility shape:
+
+```text
+[t, y0, y1, ...]
+```

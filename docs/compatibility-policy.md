@@ -83,6 +83,18 @@ M4 continues the facade strategy for scalar roots and interpolation.
 - Bisection no longer treats a tiny absolute residual alone as endpoint success. This fixes scaled-function false positives such as `1e-20 * (x - c)`.
 - Consumers using the new source package should recompile. ABI stability and compatibility with old precompiled binaries are still not promised.
 
+## M5 Legacy Migration Policy
+
+M5 continues the compatibility-facade strategy for calculus and ODE routines in `Basics.hpp`.
+
+- `Derivative::dy_dx` and `Derivative::dy_dx_center` keep their names, argument order, default `eps`, and `double` return type while delegating to `MatCal::Calculus`.
+- `NumericalIntegration::Instant`, `NewtonCotes`, `CompositeNewtonCotes`, and `Romberg` keep their legacy signatures while delegating to `MatCal::Calculus`.
+- `ODE::SimpleEuler`, `ODE::Euler`, and `ODE::RungeKutta_44` keep their old table-shaped `Matrix` results while delegating to `MatCal::ODE`.
+- PT-sensitive `Integrate::RK4::step` and `step2` keep their public signatures and now use the shared RK4 core.
+- `Instant` now accepts reverse intervals and returns the signed integral. This is a documented source-compatible behavior change from the M0.1 stricter interval check.
+- `Romberg` no longer returns the last estimated error as a pseudo integral when convergence fails. Legacy callers receive an exception through the old throwing style.
+- Source consumers should recompile to pick up the M5 header-only changes. ABI stability and compatibility with old precompiled binaries are still not promised.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

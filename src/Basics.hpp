@@ -24,6 +24,8 @@ namespace MatCal{
 #include"Matrix.hpp"
 #include"QinJiuShao.hpp"
 #include"Insert.hpp"
+#include"MatCal/Calculus/Calculus.hpp"
+#include"MatCal/ODE/ODE.hpp"
 
 namespace MatCal::Algorithm::Basics{
     using QinJiuShao = MatCal::Utils::QinJiuShao;
@@ -90,14 +92,16 @@ public:
 
     //Func_y求导dy/dx,默认向后取eps
     static double dy_dx(Func_y _func,double x,double eps=1e-6){
-        return (
-            ( _func(x+eps) - _func(x) ) / eps
-        );
+        auto result = MatCal::Calculus::forward_difference(_func, x, eps);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        return result.value;
     }
     static double dy_dx_center(Func_y _func,double x,double eps=1e-6){
-        return (
-            ( _func(x+0.5*eps) - _func(x-0.5*eps) ) / eps
-        );
+        auto result = MatCal::Calculus::central_difference(_func, x, eps);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        return result.value;
     }
 
     //Func_F求偏导pF/px(指定某一个位置)，本方法不对索引越界负责
@@ -400,148 +404,43 @@ class NumericalIntegration{
 public:
     //指定函数，按定义积分
     static double Instant(std::function<double(double)> _func,double a,double b,double eps=1e-6){
-        if(!std::isfinite(a) || !std::isfinite(b) || !std::isfinite(eps)){
-            throw std::invalid_argument("a, b and eps should be finite!");
-        }
-        if(a>b){
-            throw std::invalid_argument("a should <= b !");
-        }
-        if(!_func){
-            throw std::invalid_argument("_func cannot be nullptr!");
-        }
-        if(eps<=0 || eps > (b-a)){
-            throw std::invalid_argument("eps not available!");
-        }
-        double curr = a;
-        double ret = 0;
-        while(curr<b){
-            double width = std::min(eps, b - curr);
-            ret += _func(curr) * width;
-            curr+=eps;
-        }
-        return ret;
+        auto result = MatCal::Calculus::integrate_instant(_func, a, b, eps);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        return result.value;
     }
 
     //NewtonCotes
     static double NewtonCotes(std::function<double(double)> func, double a, double b, int n = 4) {
-        if(a > b){
-            throw std::invalid_argument("a should <= b !");
-        }
-        if(!func){
-            throw std::invalid_argument("func cannot be nullptr!");
-        }
-        if(n < 1 || n > 7){
-            throw std::invalid_argument("n must be between 1 and 7");
-        }
-        const std::vector<double>& coeffs = CotesSheet[n - 1];
-        double h = (b - a) / n;
-        double sum = 0.0;
-        for (int i = 0; i <= n; ++i) {
-            double x = a + i * h;
-            sum += coeffs[i] * func(x);
-        }
-        return sum * (b - a);
+        auto result = MatCal::Calculus::integrate_newton_cotes(func, a, b, n);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        return result.value;
     }
 
     //CompositeNewtonCotes
     static double CompositeNewtonCotes(std::function<double(double)> func, double a, double b, int segments = 10, int n = 4) {
-        if(a > b){
-            throw std::invalid_argument("a should <= b !");
-        }
-        if(!func){
-            throw std::invalid_argument("func cannot be nullptr!");
-        }
-        if(segments <= 0){
-            throw std::invalid_argument("segments must be > 0");
-        }
-        if(n < 1 || n > 7){
-            throw std::invalid_argument("n must be between 1 and 7");
-        }
-        
-        const std::vector<double>& coeffs = CotesSheet[n - 1];
-        double segment_width = (b - a) / segments;
-        double total = 0.0;
-        double h = segment_width / n;
-        for(int seg = 0; seg < segments; ++seg){
-            double seg_a = a + seg * segment_width;
-            double seg_b = seg_a + segment_width;
-
-            double sum = 0.0;
-            for(int i = 0; i <= n; ++i){
-                double x = seg_a + i * h;
-                sum += coeffs[i] * func(x);
-            }
-            total += sum;
-        }
-        return total * segment_width;
+        auto result = MatCal::Calculus::integrate_composite_newton_cotes(func, a, b, segments, n);
+        if(!result.success())
+            throw std::invalid_argument(result.diagnostic.message);
+        return result.value;
     }
 
     //Romberg
     static std::pair<double,MatCal::Utils::Matrix> Romberg(std::function<double(double)> func,double a,double b,double eps=1e-6,int maxIterations =20){
-        if(a > b){
-            throw std::invalid_argument("a should <= b !");
+        MatCal::Calculus::IntegrationOptions options;
+        options.tolerance = eps;
+        options.max_iterations = maxIterations;
+        auto result = MatCal::Calculus::integrate_romberg(func, a, b, options);
+        int rows = static_cast<int>(std::max<std::size_t>(result.table.size(), 1));
+        MatCal::Utils::Matrix sheet(rows, 4);
+        for(int r = 0; r < rows; ++r){
+            for(int c = 0; c < 4 && r < static_cast<int>(result.table.size()) && c < static_cast<int>(result.table[r].size()); ++c)
+                sheet.set(r, c, result.table[r][c]);
         }
-        if(!func){
-            throw std::invalid_argument("func cannot be nullptr!");
-        }
-        if(maxIterations<0){
-            throw std::invalid_argument("maxIterations should >= 0 !");
-        }
-        
-        MatCal::Utils::Matrix sheet(5,4);
-        int expand = 2;
-        double ba = b-a;
-        std::vector<bool> calc_available = {
-            true,false,false,false
-        };
-        sheet.set(0,0,(
-            ba / 2  * (func(a) + func(b))
-        ));
-        double last = INT_MAX;
-        int iter = 1;
-        while(last  > eps && iter <=maxIterations){
-            if(iter >= sheet.getRows()){
-                sheet.resize(sheet.getRows()*expand,sheet.getCols());
-            }
-            //T
-            double t_new = 0;
-            double n = std::pow(2,iter-1);
-            for(int i=1;i<=n;++i){
-                t_new+=func(
-                    a + ( 2*i-1 ) * ba / (2*n)
-                );
-            }
-            t_new*=(
-                ba/(2*n)
-            );
-            t_new+=sheet.get(iter-1,0)/2;
-            sheet.set(iter,0,t_new);
-
-            last = std::min(last,std::abs(sheet.get(iter,0)-sheet.get(iter-1,0)));
-            if(last < eps)
-                return std::make_pair(t_new,sheet);
-
-            //SCR
-            for(int i=1;i<4;++i){
-                if(i==iter) calc_available[i]=true;
-                if(calc_available[i]){
-                    double ret = std::pow(4,i) * sheet.get(iter,i-1) - sheet.get(iter-1,i-1);
-                    ret/=(std::pow(4,i)-1);
-                    sheet.set(iter,i,ret);
-                    //last计算，先横向再竖向
-                    last = std::min(last,std::abs(sheet.get(iter,i)-sheet.get(iter,i-1)));
-                    if(last < eps)
-                        return std::make_pair(ret,sheet);
-                    if(iter>i){
-                        last = std::min(last,std::abs(sheet.get(iter,i)-sheet.get(iter-1,i)));
-                        if(last < eps)
-                            return std::make_pair(ret,sheet);
-                    }
-                }
-            }//for SCR
-            ++iter;
-        }//while
-        return std::make_pair(last,sheet);
+        if(!result.success())
+            throw std::runtime_error(result.diagnostic.message);
+        return std::make_pair(result.value, sheet);
     }//Romberg
 
     //离散数据表
@@ -576,38 +475,63 @@ inline const std::vector<std::vector<double>> NumericalIntegration::CotesSheet =
 
 //常微分方程求解(ODE)
 class ODE{
+private:
+    static MatCal::Utils::Matrix matrix_from_trajectory(const std::vector<std::vector<double>>& trajectory){
+        if(trajectory.empty())
+            return MatCal::Utils::Matrix();
+        MatCal::Utils::Matrix result(static_cast<int>(trajectory.size()), static_cast<int>(trajectory[0].size()));
+        for(int r = 0; r < static_cast<int>(trajectory.size()); ++r)
+            for(int c = 0; c < static_cast<int>(trajectory[r].size()); ++c)
+                result[r][c] = trajectory[r][c];
+        return result;
+    }
+
+    static MatCal::ODE::Rhs adapt_legacy_rhs(int n, std::vector<std::function<double(std::vector<double>&)>>& funcs){
+        return [n, funcs](double t, const std::vector<double>& state) {
+            std::vector<double> row(static_cast<std::size_t>(n) + 1);
+            row[0] = t;
+            for(int i = 0; i < n; ++i)
+                row[static_cast<std::size_t>(i) + 1] = state[static_cast<std::size_t>(i)];
+            std::vector<double> values(static_cast<std::size_t>(n));
+            for(int i = 0; i < n; ++i){
+                auto mutable_row = row;
+                values[static_cast<std::size_t>(i)] = funcs[static_cast<std::size_t>(i)](mutable_row);
+            }
+            return values;
+        };
+    }
+
 public:
     //SimpleEuler
     static MatCal::Utils::Matrix SimpleEuler(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
         if(n < 1)
             throw std::invalid_argument("n should be >= 1 !");
-        if(funcs.size()!=n)
+        const auto expected_state_size = static_cast<std::size_t>(n);
+        const auto expected_row_size = expected_state_size + 1;
+        if(funcs.size()!=expected_state_size)
             throw std::invalid_argument("func.size not match n!   func.size:" + std::to_string(funcs.size())+ "  n:" + std::to_string(n) );
-        if(inits.size()!=n+1)
+        if(inits.size()!=expected_row_size)
             throw std::invalid_argument("inits.size not match n+1!   inits.size:" + std::to_string(inits.size())+ "  n+1:" + std::to_string(n+1) );
         if(h <= 0)
             throw std::invalid_argument("h should be > 0 !");
         if(count < 1)
             throw std::invalid_argument("count should be >= 1 !");
-        MatCal::Utils::Matrix result(count+1,n+1);
-        for(int i=0;i<=n;++i)
-            result[0][i] = inits[i];
-        for(int cnt = 1;cnt<=count;++cnt){
-            result[cnt][0] = result[cnt-1][0] + h;
-            for(int k = 1;k<=n;++k){
-                result[cnt][k] = result[cnt-1][k] + h * funcs[k-1](result[cnt-1]);
-            }//for k(1)
-        }//for cnt(1)
-        return result;
+        std::vector<double> state(inits.begin() + 1, inits.end());
+        auto result = MatCal::ODE::integrate_euler(adapt_legacy_rhs(n, funcs), inits[0], state, h, count);
+        if(!result.success())
+            throw std::runtime_error(result.diagnostic.message);
+        return matrix_from_trajectory(result.trajectory);
     }//SimpleEuler
 
     //imporovedEuler,前一个为算出来的值，后面一个是中间的临时值，供手写用(没什么卵用,仅供手写做题用)
     static std::pair<MatCal::Utils::Matrix,MatCal::Utils::Matrix> Euler(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
         if(n < 1)
             throw std::invalid_argument("n should be >= 1 !");
-        if(funcs.size()!=n)
+        const auto expected_state_size = static_cast<std::size_t>(n);
+        const auto expected_row_size = expected_state_size + 1;
+        if(funcs.size()!=expected_state_size)
             throw std::invalid_argument("func.size not match n!   func.size:" + std::to_string(funcs.size())+ "  n:" + std::to_string(n) );
-        if(inits.size()!=n+1)
+        if(inits.size()!=expected_row_size)
             throw std::invalid_argument("inits.size not match n+1!   inits.size:" + std::to_string(inits.size())+ "  n+1:" + std::to_string(n+1) );
         if(h <= 0)
             throw std::invalid_argument("h should be > 0 !");
@@ -619,16 +543,22 @@ public:
             ret_temp[0][i] = inits[i];
             ret_true[0][i] = inits[i];
         }
-        for(int cnt = 1;cnt<=count;++cnt){
-            ret_temp[cnt][0] = ret_temp[cnt-1][0] + h;
-            ret_true[cnt][0] = ret_true[cnt-1][0] + h;
-            for(int k = 1;k<=n;++k){
-                ret_temp[cnt][k] = ret_true[cnt-1][k] + h * funcs[k-1](ret_true[cnt-1]);
+        auto rhs = adapt_legacy_rhs(n, funcs);
+        double t = inits[0];
+        std::vector<double> state(inits.begin() + 1, inits.end());
+        for(int cnt = 1; cnt <= count; ++cnt){
+            auto step = MatCal::ODE::improved_euler_step(rhs, t, state, h);
+            if(!step.first.success())
+                throw std::runtime_error(step.first.diagnostic.message);
+            t = step.first.t;
+            state = step.first.state;
+            ret_true[cnt][0] = t;
+            ret_temp[cnt][0] = t;
+            for(int k = 1; k <= n; ++k){
+                ret_true[cnt][k] = state[static_cast<std::size_t>(k - 1)];
+                ret_temp[cnt][k] = step.second[static_cast<std::size_t>(k - 1)];
             }
-            for(int k = 1;k<=n;++k){
-                ret_true[cnt][k] = ret_true[cnt-1][k] + h/2 * ( funcs[k-1](ret_true[cnt-1]) + funcs[k-1](ret_temp[cnt]));
-            }//for k(1)
-        }//for cnt(1)
+        }
         return std::make_pair(ret_true,ret_temp);
     }//Euler
 
@@ -636,45 +566,22 @@ public:
     static MatCal::Utils::Matrix RungeKutta_44(int n,std::vector<std::function<double(std::vector<double>&)>>& funcs,std::vector<double>& inits,double h=1e-2,int count=100){
         if(n < 1)
             throw std::invalid_argument("n should be >= 1 !");
-        if(funcs.size()!=n)
+        const auto expected_state_size = static_cast<std::size_t>(n);
+        const auto expected_row_size = expected_state_size + 1;
+        if(funcs.size()!=expected_state_size)
             throw std::invalid_argument("func.size not match n!   func.size:" + std::to_string(funcs.size())+ "  n:" + std::to_string(n) );
-        if(inits.size()!=n+1)
+        if(inits.size()!=expected_row_size)
             throw std::invalid_argument("inits.size not match n+1!   inits.size:" + std::to_string(inits.size())+ "  n+1:" + std::to_string(n+1) );
         if(h <= 0)
             throw std::invalid_argument("h should be > 0 !");
         if(count < 1)
             throw std::invalid_argument("count should be >= 1 !");
 
-        MatCal::Utils::Matrix result(count+1,n+1);
-        for(int i=0;i<=n;++i)
-            result[0][i] = inits[i];
-        for(int cnt=1; cnt<=count; ++cnt){
-            result[cnt][0] = result[cnt-1][0] + h; 
-            std::vector<double> k1(n), k2(n), k3(n), k4(n);
-            std::vector<double> base = result[cnt-1];
-            //K1
-            for(int i=0; i<n; ++i) k1[i] = funcs[i](base);
-            //K2
-            std::vector<double> tmp = base;
-            tmp[0] += h/2.0;
-            for(int i=0; i<n; ++i) tmp[i+1] += (h/2.0) * k1[i];
-            for(int i=0; i<n; ++i) k2[i] = funcs[i](tmp);
-            //K3
-            tmp = base;
-            tmp[0] += h/2.0;
-            for(int i=0; i<n; ++i) tmp[i+1] += (h/2.0) * k2[i];
-            for(int i=0; i<n; ++i) k3[i] = funcs[i](tmp);
-            //K4
-            tmp = base;
-            tmp[0] += h;
-            for(int i=0; i<n; ++i) tmp[i+1] += h * k3[i];
-            for(int i=0; i<n; ++i) k4[i] = funcs[i](tmp);
-            //Y
-            for(int i=0; i<n; ++i) {
-                result[cnt][i+1] = base[i+1] + (h/6.0) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
-            }
-        }
-        return result;
+        std::vector<double> state(inits.begin() + 1, inits.end());
+        auto result = MatCal::ODE::integrate_rk4(adapt_legacy_rhs(n, funcs), inits[0], state, h, count);
+        if(!result.success())
+            throw std::runtime_error(result.diagnostic.message);
+        return matrix_from_trajectory(result.trajectory);
     }//RungeKutta_44
 
 };//class ODE
@@ -696,36 +603,17 @@ public:
                      double dt,
                      std::vector<double>& y_out)
     {
-        const std::size_t n = y.size();
-        if (n == 0)
-            throw std::runtime_error("RK4::step: state dimension = 0");
-
-        std::vector<double> k1(n), k2(n), k3(n), k4(n), y_tmp(n);
-
-        // k1 = f(y)
-        f(y, k1);
-
-        // k2 = f(y + dt/2 * k1)
-        for (std::size_t i = 0; i < n; ++i)
-            y_tmp[i] = y[i] + 0.5 * dt * k1[i];
-        f(y_tmp, k2);
-
-        // k3 = f(y + dt/2 * k2)
-        for (std::size_t i = 0; i < n; ++i)
-            y_tmp[i] = y[i] + 0.5 * dt * k2[i];
-        f(y_tmp, k3);
-
-        // k4 = f(y + dt * k3)
-        for (std::size_t i = 0; i < n; ++i)
-            y_tmp[i] = y[i] + dt * k3[i];
-        f(y_tmp, k4);
-
-        // y_out = y + dt/6 * (k1 + 2k2 + 2k3 + k4)
-        y_out.resize(n);
-        const double c1 = dt / 6.0;
-        for (std::size_t i = 0; i < n; ++i) {
-            y_out[i] = y[i] + c1 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-        }
+        if(!f)
+            throw std::invalid_argument("RK4::step: RHS cannot be empty");
+        MatCal::ODE::Rhs rhs = [&f](double, const std::vector<double>& state) {
+            std::vector<double> dydt(state.size());
+            f(state, dydt);
+            return dydt;
+        };
+        auto result = MatCal::ODE::rk4_step(rhs, 0.0, y, dt);
+        if(!result.success())
+            throw std::runtime_error(result.diagnostic.message);
+        y_out = result.state;
     }
 
     // 2 维系统专用版本： (theta, omega)
@@ -740,32 +628,19 @@ public:
                       double& theta_out,
                       double& omega_out)
     {
-        double k1_theta, k1_omega;
-        double k2_theta, k2_omega;
-        double k3_theta, k3_omega;
-        double k4_theta, k4_omega;
-
-        // k1
-        f(theta, omega, k1_theta, k1_omega);
-
-        // k2
-        f(theta + 0.5 * dt * k1_theta,
-          omega + 0.5 * dt * k1_omega,
-          k2_theta, k2_omega);
-
-        // k3
-        f(theta + 0.5 * dt * k2_theta,
-          omega + 0.5 * dt * k2_omega,
-          k3_theta, k3_omega);
-
-        // k4
-        f(theta + dt * k3_theta,
-          omega + dt * k3_omega,
-          k4_theta, k4_omega);
-
-        const double c1 = dt / 6.0;
-        theta_out = theta + c1 * (k1_theta + 2.0 * k2_theta + 2.0 * k3_theta + k4_theta);
-        omega_out = omega + c1 * (k1_omega + 2.0 * k2_omega + 2.0 * k3_omega + k4_omega);
+        if(!f)
+            throw std::invalid_argument("RK4::step2: RHS cannot be empty");
+        MatCal::ODE::Rhs rhs = [&f](double, const std::vector<double>& state) {
+            double dtheta = 0.0;
+            double domega = 0.0;
+            f(state[0], state[1], dtheta, domega);
+            return std::vector<double>{dtheta, domega};
+        };
+        auto result = MatCal::ODE::rk4_step(rhs, 0.0, std::vector<double>{theta, omega}, dt);
+        if(!result.success())
+            throw std::runtime_error(result.diagnostic.message);
+        theta_out = result.state[0];
+        omega_out = result.state[1];
     }
 };
 

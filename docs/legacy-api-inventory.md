@@ -193,6 +193,25 @@ void Integrate::RK4::step(const RHS& f, const std::vector<double>& y, double dt,
 void Integrate::RK4::step2(const RHS2& f, double theta, double omega, double dt, double& theta_out, double& omega_out);
 ```
 
+M5 adds independent 0.x targets while preserving every legacy signature above:
+
+```cpp
+// MatCal::Calculus
+DerivativeResult forward_difference(Function f, double x, double step);
+DerivativeResult central_difference(Function f, double x, double step);
+IntegrationResult integrate_instant(Function f, double a, double b, double step);
+IntegrationResult integrate_newton_cotes(Function f, double a, double b, int order);
+IntegrationResult integrate_composite_newton_cotes(Function f, double a, double b, int segments, int order);
+IntegrationResult integrate_romberg(Function f, double a, double b, const IntegrationOptions& options = {});
+
+// MatCal::ODE
+OdeStepResult euler_step(Rhs rhs, double t, const std::vector<double>& state, double dt, const OdeOptions& options = {});
+std::pair<OdeStepResult, std::vector<double>> improved_euler_step(Rhs rhs, double t, const std::vector<double>& state, double dt, const OdeOptions& options = {});
+OdeStepResult rk4_step(Rhs rhs, double t, const std::vector<double>& state, double dt, const OdeOptions& options = {});
+OdeTrajectoryResult integrate_euler(Rhs rhs, double t0, const std::vector<double>& state0, double dt, std::size_t count, const OdeOptions& options = {});
+OdeTrajectoryResult integrate_rk4(Rhs rhs, double t0, const std::vector<double>& state0, double dt, std::size_t count, const OdeOptions& options = {});
+```
+
 ### Iteration
 
 ```cpp
