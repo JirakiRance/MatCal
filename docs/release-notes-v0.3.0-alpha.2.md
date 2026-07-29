@@ -17,6 +17,7 @@ No new numerical algorithms, CMake targets, public classes, solver statuses, or 
 - Emits failed Linux CTest names and `FAIL:` assertion summaries as GitHub annotations so they remain visible even when artifact downloads require repository permissions.
 - Uploads Linux CTest `LastTest.log` and `LastTestsFailed.log` artifacts on failure when those files exist.
 - Restricts Debug and Release rerun/upload diagnostics to the matching failed CTest step, avoiding spurious Release diagnostics after an earlier Debug failure.
+- Fixes a Picard-Aitken cancellation edge case that made `matcal_roots_tests` fail on Linux GCC Debug: near the fixed point, the Aitken denominator is now treated as unstable when it is below the requested iterate tolerance, and the step falls back to the ordinary Picard update instead of amplifying roundoff.
 - Records the missing repository license as a release blocker in `docs/licensing-decision.md`.
 
 ## CI Status Requirement

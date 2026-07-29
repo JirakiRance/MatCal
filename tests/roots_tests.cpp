@@ -45,6 +45,7 @@ void oracle_tests() {
     RootResult aitken = solve_picard_aitken(fixed_point, 0.5, aitken_options);
     expect_true(aitken.success(), "Aitken converges on cos fixed point");
     expect_near(aitken.value, 0.7390851332151607, 1.0e-8, "Aitken cos fixed point");
+    expect_true(aitken.metrics.iterations < 20, "Aitken avoids cancellation-driven stagnation");
 
     RootResult secant_two = solve_secant_two_point(square_minus_two, 1.0, 2.0, strict_options());
     expect_true(secant_two.success(), "two-point secant converges");

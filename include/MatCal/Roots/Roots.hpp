@@ -310,7 +310,9 @@ inline RootResult solve_picard_aitken(const Function& phi, double x0, RootOption
         if (!std::isfinite(p1) || !std::isfinite(p2) || !std::isfinite(denominator)) {
             return std::numeric_limits<double>::quiet_NaN();
         }
-        if (std::abs(denominator) <= options.derivative_tolerance) {
+        const double denominator_tolerance =
+            std::max(options.derivative_tolerance, detail::tolerance_for(x, options));
+        if (std::abs(denominator) <= denominator_tolerance) {
             return p1;
         }
         return (x * p2 - p1 * p1) / denominator;
