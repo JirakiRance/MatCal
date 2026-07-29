@@ -76,6 +76,11 @@ int main() {
     if (!result.success()) {
         return 3;
     }
+    auto lu = MatCal::Linalg::factorize_dense_partial_pivot(
+        MatCal::Linalg::DenseMatrix{{0.0, 1.0}, {1.0, 0.0}});
+    if (!lu.success() || lu.factorization.determinant() != -1.0) {
+        return 14;
+    }
     auto iterative = MatCal::Linalg::solve_gauss_seidel(
         MatCal::Linalg::DenseMatrix{{4.0, 1.0}, {2.0, 3.0}},
         MatCal::Linalg::Vector{1.0, 2.0});

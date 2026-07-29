@@ -119,6 +119,17 @@ M7 continues the compatibility-facade strategy for legacy Matrix algorithms and 
 - The new Linalg iterative/eigen functions are 0.x source APIs under the existing `MatCal::Linalg` target. They are not ABI-stable.
 - Source consumers should recompile to pick up M7 header-only changes. ABI stability and compatibility with old precompiled binaries are still not promised.
 
+## M8 Dense LU Migration Policy
+
+M8 adds reusable pivoted LU under `MatCal::Linalg` without deleting or renaming legacy APIs.
+
+- `PivotedLuFactorization`, `PivotedLuFactorizationResult`, `MatrixSolverResult`, and `factorize_dense_partial_pivot` are 0.x source APIs under `MatCal::Linalg`.
+- `solve_dense_partial_pivot` keeps its public signature and now acts as a one-shot facade over the reusable factorization.
+- Legacy `solve_columnElimination` keeps its public signature and exception-oriented failure style. It now factors once and solves all RHS columns atomically through the Linalg factorization.
+- Legacy `determinant` keeps its public signature and exception contract while using the pivoted LU permutation sign.
+- Legacy `LU_Decompose` keeps its old no-pivot semantics. It is not redirected to pivoted LU because the old `LUresult` cannot represent the permutation in `P A = L U`.
+- Source consumers should recompile to pick up M8 changes. ABI stability and compatibility with old precompiled binaries are still not promised.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

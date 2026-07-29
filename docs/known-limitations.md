@@ -14,8 +14,8 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 ## Remaining Confirmed Bugs / High-Risk Behavior
 
-- `LU_Decompose` has no pivoting. Risk: fails on invertible matrices with zero/small leading pivots. Compatibility handling: document as no-pivot LU; add pivoted LU under a new name/result type.
-- `solve_columnElimination` now delegates to the structured dense partial-pivot solver, but its legacy facade still maps numerical failure to exceptions rather than returning `SolverResult`.
+- `LU_Decompose` has no pivoting. Risk: fails on invertible matrices with zero/small leading pivots. Compatibility handling: document as no-pivot LU; use `MatCal::Linalg::factorize_dense_partial_pivot` when a reusable pivoted factorization is required.
+- `solve_columnElimination` now delegates through the structured dense partial-pivot LU factorization, but its legacy facade still maps numerical failure to exceptions rather than returning `SolverResult`.
 - `solve_Linear_System` automatically tries multiple algorithms. Risk: policy and diagnostics are mixed into a low-level helper. Compatibility handling: preserve legacy behavior, then add explicit status-based solver selection.
 - `Matrix(AbstractMatrix&)` still takes a non-const reference even though it copies. Risk: const callers cannot use it directly. Compatibility handling: add const-safe overloads in M1 without removing the old constructor.
 - Several dynamic casts assume dense conversion success. Risk: future matrix types could expose unchecked null paths. Compatibility handling: centralize checked conversions in M1 internals.
@@ -37,7 +37,7 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 
 - `MatCal::Linalg` is a 0.x development API, not an ABI-stable API.
 - `DenseMatrix` is contiguous row-major storage for small dense work and reference tests. It is not a replacement for future large FEM sparse storage.
-- `solve_dense_partial_pivot` is a reference Gaussian-elimination solver. It is not optimized for large systems and does not provide multiple right-hand sides.
+- `solve_dense_partial_pivot` is a one-shot facade over reusable partial-pivot LU. It is not optimized for large systems. Use `factorize_dense_partial_pivot` plus `PivotedLuFactorization::solve(DenseMatrix)` for multiple right-hand sides.
 - `not_positive_definite` is used by skyline LDLT and remains available for future SPD algorithms. The dense reference solver can use `not_converged` if a finite residual exceeds the acceptance contract.
 - M1 does not bridge legacy APIs to `MatCal::Linalg`; the targets intentionally remain parallel.
 
@@ -93,7 +93,7 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 ## M7 Matrix, Iterative, Eigen, and Derivative Migration Notes
 
 - Legacy matrix-to-linalg adapters deep-copy data and reject non-finite values. They do not provide zero-copy views.
-- Legacy `solve_columnElimination` now delegates to `MatCal::Linalg::solve_dense_partial_pivot`. Multiple right-hand sides are prevalidated and then solved column-by-column; a future factorization object could avoid repeated factorization.
+- Legacy `solve_columnElimination` now delegates to `MatCal::Linalg::factorize_dense_partial_pivot` and solves all right-hand-side columns with a single factorization.
 - Legacy `Jacobi`, `Gauss_Seidel`, and `SOR` now delegate to `MatCal::Linalg` stationary solvers. Core non-convergence returns `SolverStatus::not_converged` without a partial solution; the legacy facade maps this to `converged=false`.
 - `MatCal::Linalg` stationary solvers are dense reference algorithms. They do not include sparse matrix support, preconditioners, or convergence guarantees for non-diagonally-dominant systems.
 - M7.1 fixes a stationary-solver edge case where an overflowed initial residual could continue into the iteration loop instead of immediately returning `breakdown`.
@@ -101,3 +101,11 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - The M7 eigen solvers are basic dense power iterations. Repeated, clustered, or difficult eigenvalues may converge slowly or report `not_converged`.
 - Legacy `LU_Decompose` remains no-pivot LU and is not silently replaced with pivoted LU.
 - `Derivative::pF_px` and `Derivative::dF_dx` now delegate to `MatCal::Calculus` partial derivative and gradient helpers.
+
+## M8 Dense Pivoted LU Migration Notes
+
+- `MatCal::Linalg::PivotedLuFactorization` owns compact `LU`, row permutation, permutation sign, the original matrix copy used for residual checks, and factorization metrics.
+- `solve_dense_partial_pivot` now delegates to `factorize_dense_partial_pivot` and then `PivotedLuFactorization::solve`.
+- Dense multi-RHS solves are atomic and reuse one factorization.
+- Legacy `determinant` now delegates to pivoted LU and computes `permutation_sign * product(diag(U))`.
+- Legacy `LU_Decompose` remains the old no-pivot compatibility API because its result type cannot represent `P` in `P A = L U`.

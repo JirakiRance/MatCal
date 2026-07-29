@@ -1,6 +1,6 @@
 # MatCal::Linalg v0.1
 
-M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. M2 adds general symmetric skyline storage and SPD LDLT. M7 adds stationary iterative solvers and power eigen solvers. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
+M1 introduces `MatCal::Linalg` as a new 0.x development API. M1.1 hardens its scale, finite-value, and `SolverResult` contracts. M2 adds general symmetric skyline storage and SPD LDLT. M7 adds stationary iterative solvers and power eigen solvers. M8 adds reusable dense partial-pivot LU factorization. It is independent from the legacy `MatCal::Utils::Matrix` and `AbstractMatrix` hierarchy.
 
 ## Public Headers
 
@@ -61,9 +61,30 @@ This dense container is a correctness baseline and small-problem utility. It is 
 
 `DenseMatrix::normInf()` is the conventional maximum absolute row sum and can return Inf if a finite row sum overflows. The dense solver does not use this as its pivot scale; it uses a safe maximum absolute coefficient scale so scale computation itself does not silently turn finite input into Inf.
 
-## Dense Reference Solver
+## Dense Pivoted LU and Reference Solver
 
-`solve_dense_partial_pivot(const DenseMatrix&, const Vector&, const SolverOptions&)` is a small reference solver using partial-pivot Gaussian elimination.
+M8 adds reusable partial-pivot LU:
+
+- `PivotedLuFactorization`
+- `PivotedLuFactorizationResult`
+- `MatrixSolverResult`
+- `factorize_dense_partial_pivot`
+
+The factorization owns the original matrix copy, compact `LU` data, row permutation, permutation sign, and factorization metrics. The contract is:
+
+```text
+P A = L U
+```
+
+where `L` is unit lower triangular in the strict lower part of `lu()`, `U` is the upper triangle of `lu()`, and `row_permutation()[i]` is the original row used for permuted row `i`.
+
+`PivotedLuFactorization::solve(Vector)` and `solve(DenseMatrix)` reuse the same factorization. Matrix RHS solves are atomic: dimensions and finite RHS values are validated before computation, and numerical failure returns no partial solution matrix.
+
+`solve_dense_partial_pivot(const DenseMatrix&, const Vector&, const SolverOptions&)` remains the one-shot reference solver, but it is now implemented as:
+
+```text
+factorize_dense_partial_pivot(A, options) -> factorization.solve(b, options)
+```
 
 It:
 
@@ -79,6 +100,7 @@ It:
 - Reports singular and near-singular pivots with structured status.
 - Returns `breakdown` for non-finite intermediate values during factorization, back substitution, or residual evaluation.
 - Returns no partial-success solution on failure.
+- Computes determinant through `permutation_sign * product(diag(U))`.
 
 Scale invariance contract: multiplying a nonsingular finite system by ordinary finite factors such as `1e-20`, `1`, and `1e20` must not by itself change success into singular. This is covered by regression tests.
 

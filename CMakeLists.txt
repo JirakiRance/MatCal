@@ -470,6 +470,10 @@ if(BUILD_TESTING)
         tests/linalg/solver_tests.cpp
     )
 
+    matcal_add_linalg_test(matcal_linalg_pivoted_lu_tests
+        tests/linalg/pivoted_lu_tests.cpp
+    )
+
     matcal_add_linalg_test(matcal_linalg_scale_contract_tests
         tests/linalg/scale_contract_tests.cpp
     )

@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation. M7 migrates legacy Matrix direct, stationary iterative, eigen, and multivariable derivative helper paths.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation. M7 migrates legacy Matrix direct, stationary iterative, eigen, and multivariable derivative helper paths. M8 adds reusable dense pivoted LU and routes dense/legacy direct-solve facades through it.
 
 ## Current Shape
 
@@ -52,7 +52,7 @@ Do not describe `MatCal::Linalg` as ABI-stable or production-ready.
 2. Maintain M1.1 `Vector`, `DenseMatrix`, `SolverOptions`, `SolverDiagnostic`, `SolverMetrics`, and `SolverResult` as the new baseline.
 3. Maintain M2/M2.1 `SymmetricSkylineMatrix` and SPD `SkylineLdltFactorization` as general numerical facilities.
 4. Keep the M3 legacy migration matrix current as each family moves from `legacy-only` to `migrated`.
-5. Add pivoted LU factors as a new explicit API while preserving legacy no-pivot `LU_Decompose`.
+5. Maintain M8 `PivotedLuFactorization` as the reusable dense direct-solve baseline while preserving legacy no-pivot `LU_Decompose`.
 6. Separate matrix storage from solver algorithms.
 7. Replace stdout from core paths with structured status or caller-provided diagnostics.
 8. Expand scale-aware tolerance helpers only when algorithms need them.
@@ -124,6 +124,16 @@ M7 adds:
 - Legacy delegation for `solve_columnElimination`, `Jacobi`, `Gauss_Seidel`, `SOR`, `PowerMethod`, and `PowerMethod_reverse`.
 - `MatCal::Calculus::partial_difference` and `gradient`.
 - Legacy delegation for `Derivative::pF_px` and `Derivative::dF_dx`.
+
+M8 adds:
+
+- `MatCal::Linalg::PivotedLuFactorization`, `PivotedLuFactorizationResult`, and `MatrixSolverResult`.
+- `factorize_dense_partial_pivot` as the reusable partial-pivot LU factorization API.
+- `solve_dense_partial_pivot` as a one-shot facade over `factorize -> solve`.
+- Multi-RHS solve support through `PivotedLuFactorization::solve(DenseMatrix)`.
+- Legacy `solve_columnElimination` routing through one factorization for all RHS columns.
+- Legacy `determinant` routing through pivoted LU while keeping row-swap sign.
+- Legacy `LU_Decompose` explicitly retained as no-pivot compatibility API.
 
 ## Future Capabilities
 

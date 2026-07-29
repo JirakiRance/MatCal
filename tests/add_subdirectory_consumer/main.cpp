@@ -57,6 +57,12 @@ int main() {
         return 11;
     }
 
+    auto lu = MatCal::Linalg::factorize_dense_partial_pivot(
+        MatCal::Linalg::DenseMatrix{{0.0, 1.0}, {1.0, 0.0}});
+    if (!lu.success() || lu.factorization.determinant() != -1.0) {
+        return 12;
+    }
+
     MatCal::Polynomial::Polynomial p{1.0, 2.0};
     if (p.evaluate(3.0) != 7.0) {
         return 3;

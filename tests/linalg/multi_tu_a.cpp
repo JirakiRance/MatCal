@@ -6,3 +6,9 @@ MatCal::Linalg::Vector matcal_linalg_multi_tu_solve_a() {
         MatCal::Linalg::Vector{6.0, 8.0});
     return result.solution;
 }
+
+double matcal_linalg_multi_tu_lu_determinant() {
+    auto factorization = MatCal::Linalg::factorize_dense_partial_pivot(
+        MatCal::Linalg::DenseMatrix{{0.0, 1.0}, {1.0, 0.0}});
+    return factorization.factorization.determinant();
+}

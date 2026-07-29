@@ -60,7 +60,9 @@ int main() {
     expect_near(filled(1, 1), 3.0, 1e-12, "fill");
 
     expect_throw([] {
-        DenseMatrix too_large(std::numeric_limits<std::size_t>::max() / 2 + 1, 3);
+        volatile std::size_t rows = std::numeric_limits<std::size_t>::max() / 2 + 1;
+        volatile std::size_t cols = 3;
+        DenseMatrix too_large(rows, cols);
     }, "size overflow rejected before allocation");
 
     DenseMatrix non_finite{{1.0, std::numeric_limits<double>::infinity()}};

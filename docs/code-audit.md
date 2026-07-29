@@ -214,3 +214,30 @@ New coverage:
 - Stationary solver zero-size, zero-matrix, 1x1, zero-RHS/nonzero-initial, invalid initial guess, omega-near-boundary, residual-overflow, input-preservation, and fixed-seed dense/direct differential tests.
 - Eigen solver tiny/huge scale, near-zero initial vector, repeated dominant magnitude, near/exact shift, non-finite input, input-preservation, and fixed-seed symmetric residual tests.
 - Legacy adapter empty roundtrip, non-finite rejection, multi-RHS direct solve, direct failure input preservation, determinant parity, and no-pivot LU failure tests.
+
+## M8 Dense Pivoted LU Audit
+
+M8 reviewed `solve_dense_partial_pivot`, legacy `solve_columnElimination`, legacy `determinant`, and legacy `LU_Decompose` before changing direct-solve paths.
+
+Reused implementation ideas:
+
+- Existing partial-pivot row search and row-swap elimination loop from the M1/M7 dense solver.
+- Existing M1.1 scale-aware pivot tolerance, finite checks, residual acceptance contract, and `SolverMetrics` fields.
+- Existing Legacy/Linalg deep-copy adapters for compatibility facades.
+
+M8 repairs and refactors:
+
+- `solve_dense_partial_pivot` no longer owns an independent full solve loop. It delegates to `factorize_dense_partial_pivot` and then solves one RHS.
+- `PivotedLuFactorization` owns compact `LU`, row permutation, permutation sign, original matrix copy, and factorization metrics.
+- Dense multi-RHS solve now factors once and solves all columns atomically.
+- Legacy `solve_columnElimination` now uses one factorization for all RHS columns instead of re-running Gaussian elimination per column.
+- Legacy `determinant` now delegates to pivoted LU and computes `permutation_sign * product(diag(U))` without modifying the input.
+- Legacy `LU_Decompose` remains no-pivot LU because its old `LUresult` cannot represent the permutation in `P A = L U`.
+
+New coverage:
+
+- `PA = LU` reconstruction.
+- Odd/even row-swap determinant signs.
+- Singular, near-singular, non-finite, 0x0, 1x1, and scale `1e-20/1/1e20` cases.
+- Multi-RHS reuse and operation-count checks.
+- Input preservation, fixed-seed random solve cross-checks, public-header self-contained coverage, and multi-TU coverage.

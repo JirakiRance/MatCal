@@ -1671,30 +1671,24 @@ namespace MatCal::Algorithm::Matrix{
         auto dense = MatCal::Legacy::to_linalg_dense(A);
         if(b.getRows() != A.getRows())
             throw std::invalid_argument("Right-hand side size does not match matrix rows");
-        if(b.getCols() < 0)
-            throw std::invalid_argument("Right-hand side cols must be non-negative");
-        for(int row = 0; row < b.getRows(); ++row)
-            for(int col = 0; col < b.getCols(); ++col)
-                if(!std::isfinite(b.get(row, col)))
-                    throw std::invalid_argument("Right-hand side values must be finite");
-        MatCal::Utils::Matrix result(A.getRows(), b.getCols());
-        for(int col = 0; col < b.getCols(); ++col){
-            MatCal::Utils::Matrix rhs_column(b.getRows(), 1);
-            for(int row = 0; row < b.getRows(); ++row)
-                rhs_column.set(row, 0, b.get(row, col));
-            auto rhs = MatCal::Legacy::to_linalg_column_vector(rhs_column);
-            auto solved = MatCal::Linalg::solve_dense_partial_pivot(dense, rhs);
-            if(!solved.success()){
-                std::string message = "column elimination failed: ";
-                message += MatCal::Linalg::to_string(solved.status);
-                if(!solved.diagnostics.empty())
-                    message += " (" + solved.diagnostics.front().reason + ")";
-                throw std::runtime_error(message);
-            }
-            for(int row = 0; row < result.getRows(); ++row)
-                result.set(row, col, solved.solution[static_cast<std::size_t>(row)]);
+        auto rhs = MatCal::Legacy::to_linalg_dense(b);
+        auto factorization = MatCal::Linalg::factorize_dense_partial_pivot(dense);
+        if(!factorization.success()){
+            std::string message = "column elimination failed: ";
+            message += MatCal::Linalg::to_string(factorization.status);
+            if(!factorization.diagnostics.empty())
+                message += " (" + factorization.diagnostics.front().reason + ")";
+            throw std::runtime_error(message);
         }
-        return std::make_unique<Matrix>(result);
+        auto solved = factorization.factorization.solve(rhs);
+        if(!solved.success()){
+            std::string message = "column elimination failed: ";
+            message += MatCal::Linalg::to_string(solved.status);
+            if(!solved.diagnostics.empty())
+                message += " (" + solved.diagnostics.front().reason + ")";
+            throw std::runtime_error(message);
+        }
+        return std::make_unique<Matrix>(MatCal::Legacy::to_legacy_matrix(solved.solution));
     }
 
     //列主元解多次方程，返回的是变换后的上三角矩阵和初等变换的记录,不会对A变换（如果要变换，请applyRowSwaps）
@@ -1741,14 +1735,16 @@ namespace MatCal::Algorithm::Matrix{
     inline double determinant(AbstractMatrix& A){
         if(!A.isSquare())
             throw std::invalid_argument("Matrix should be squre!");
-        auto [upper,log]=columnElimination_Transformation(A);
-        int n=A.getCols();
-        double ret=1.0;
-        for(int i=0;i<n;++i)
-            ret*=upper->get(i,i);
-        if(log.size() % 2 == 1)
-            ret = -ret;
-        return ret;
+        auto dense = MatCal::Legacy::to_linalg_dense(A);
+        auto factorization = MatCal::Linalg::factorize_dense_partial_pivot(dense);
+        if(!factorization.success()){
+            std::string message = "determinant failed: ";
+            message += MatCal::Linalg::to_string(factorization.status);
+            if(!factorization.diagnostics.empty())
+                message += " (" + factorization.diagnostics.front().reason + ")";
+            throw std::runtime_error(message);
+        }
+        return factorization.factorization.determinant();
     }
 
     //LU分解结果类

@@ -94,6 +94,14 @@ Legacy signatures frequently use non-const references even when the function cop
 - Eigen solver results own their eigenvector only on success. Sign of the eigenvector remains unconstrained.
 - `MatCal::Calculus::partial_difference` and `gradient` copy the input state before perturbing coordinates and do not retain the callable after evaluation.
 
+## M8 Dense LU Ownership
+
+- `PivotedLuFactorization` is an owning value object. It stores the original matrix copy, compact LU data, row permutation, permutation sign, and factorization metrics.
+- `PivotedLuFactorization::solve(Vector)` and `solve(DenseMatrix)` do not mutate the factorization or RHS inputs.
+- Matrix RHS solves return an owning `DenseMatrix` only on success. Numerical failure returns structured diagnostics without a partial solution.
+- Legacy `solve_columnElimination` converts through the single Legacy/Linalg adapter and returns an owning legacy `Matrix`.
+- Legacy `LU_Decompose` remains a separate no-pivot compatibility result because its old `LUresult` has no place to own or expose a permutation.
+
 ## Printing and Diagnostics
 
 Core library code should not print to stdout in new APIs. Use return status, exceptions for programmer errors, or optional caller-provided diagnostics.

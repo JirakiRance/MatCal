@@ -1,6 +1,6 @@
 # Numerical Contracts
 
-M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. M6 adds multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation contracts. M7 adds dense stationary iterative linear solvers, dense power eigen solvers, and multivariable finite-difference derivative helpers. This does not make every current algorithm numerically robust.
+M0 records legacy behavior and direction. M1 adds the first independent linalg contracts. M1.1 hardens linalg scale and finite-value behavior. M2 adds SPD skyline LDLT. M4 adds scalar roots plus linear and natural cubic spline interpolation contracts. M5 adds scalar calculus and ODE contracts. M6 adds multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation contracts. M7 adds dense stationary iterative linear solvers, dense power eigen solvers, and multivariable finite-difference derivative helpers. M8 adds reusable dense partial-pivot LU. This does not make every current algorithm numerically robust.
 
 ## Current Legacy Contracts
 
@@ -80,6 +80,17 @@ Breakdown is distinct from singular:
 
 - `singular`: a finite pivot is zero or below the pivot tolerance.
 - `breakdown`: a finite-input computation produces NaN/Inf during factorization, back substitution, solution scaling, or residual evaluation.
+
+M8 refactors the dense direct solver around `PivotedLuFactorization`. The numerical contract is unchanged for one-shot solves, but callers can now factor once and solve many right-hand sides. The compact factorization satisfies:
+
+```text
+P A = L U
+det(A) = permutation_sign * product(diag(U))
+```
+
+`factorize_dense_partial_pivot` rejects non-square or non-finite matrices before factorization. Singular and near-singular pivots return `SolverStatus::singular` with `code = "pivot_too_small"`. Finite-input overflow during elimination returns `SolverStatus::breakdown`, not `singular`.
+
+`PivotedLuFactorization::solve(DenseMatrix rhs)` validates every RHS entry before solving. A multi-RHS failure is atomic: the result status and diagnostics are returned without a partial solution matrix. Metrics retain the original `factorization_operation_count` and add `solve_operation_count` for the requested RHS count.
 
 M2.1 correction: the M1.1 implementation used `absolute_tolerance + relative_tolerance * scale`. M2.1 changes this to `max(absolute_tolerance, relative_tolerance * scale)` so callers can express `c * max(scale, 1)` by setting both tolerances to `c`.
 
