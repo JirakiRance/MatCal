@@ -241,3 +241,15 @@ New coverage:
 - Singular, near-singular, non-finite, 0x0, 1x1, and scale `1e-20/1/1e20` cases.
 - Multi-RHS reuse and operation-count checks.
 - Input preservation, fixed-seed random solve cross-checks, public-header self-contained coverage, and multi-TU coverage.
+
+## M8.1 Release Preparation Audit
+
+M8.1 does not add new numerical algorithms. It reviews package and integration readiness for the current migrated API surface.
+
+Package and CI changes:
+
+- CMake project version updated to `0.3.0` for the planned `v0.3.0-alpha.1` prerelease tag.
+- `MatCalConfigVersion.cmake` now uses `SameMinorVersion`, which is stricter for 0.x packages than accepting any `0.*` version.
+- GitHub Actions workflow added for Linux GCC and Windows MSVC Debug/Release CTest plus install, package consumer, add-subdirectory consumer, and SFL-compatible consumer checks.
+- Package consumer now asserts that all formal exported targets exist and that `MatCal::Linalg` does not depend on `MatCal::Legacy`.
+- SFL-compatible consumer added for the generic Skyline/LDLT calls needed by a downstream adapter, without reading or copying SFL code.

@@ -101,6 +101,7 @@ This inventory describes the current public legacy surface. It is not a promise 
 - Eigen solvers: `PowerMethod_Result`, `PowerMethod`, `PowerMethod_reverse`.
 - Input mutation: signatures use non-const references. Some functions copy internally and do not mutate input; elementary transformations do mutate input.
 - M7 note: `solve_columnElimination`, `Jacobi`, `Gauss_Seidel`, `SOR`, `PowerMethod`, and `PowerMethod_reverse` keep their legacy signatures while delegating through Legacy-owned adapters to `MatCal::Linalg`.
+- M8 note: `solve_columnElimination` now factors once for all RHS columns through reusable pivoted LU, `determinant` delegates to pivoted LU sign/product logic, and `LU_Decompose` remains legacy no-pivot LU.
 
 ## `MatCal::Algorithm::Insert`
 

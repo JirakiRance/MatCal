@@ -16,6 +16,7 @@ SFL -> MatCal
 - SFL should not copy MatCal source files into its own repository.
 - SFL should not maintain a forked MatCal subtree as its internal implementation.
 - SFL should not use a precompiled MatCal binary as the default integration path; the default should be a pinned source version built through CMake.
+- For the M8.1 release candidate, SFL can evaluate upgrading from `v0.2.0-alpha.1` to `v0.3.0-alpha.1` by pinning the tag or exact commit and linking the required MatCal CMake targets.
 
 ## MatCal Must Not Contain
 
@@ -67,6 +68,18 @@ M6 keeps nonlinear and least-squares boundaries generic. `MatCal::Nonlinear` acc
 M7 keeps Matrix modernization generic. Legacy adapters convert only between legacy Matrix storage and `MatCal::Linalg` value types. Stationary iterative solvers and power eigen solvers accept only dense numeric matrices, vectors, numeric options, and numeric initial guesses. They do not accept SFL degrees of freedom, element connectivity, mesh constraints, materials, loads, source diagnostics, CAE IR, or Result IR.
 
 M8 keeps direct dense factorization generic. `PivotedLuFactorization` accepts only numeric `DenseMatrix` input and returns generic solver metrics, diagnostics, row permutations, and solution matrices. It does not accept SFL degrees of freedom, assembled-element provenance, constraints, materials, loads, source diagnostics, CAE IR, or Result IR.
+
+M8.1 adds a dedicated SFL-compatible consumer test that exercises only the generic API shape expected by an SFL adapter:
+
+- `SymmetricSkylineMatrix::from_profile`;
+- `add(row, column, value)`;
+- `multiply(Vector)`;
+- `SolverOptions` override;
+- `factorize_skyline_ldlt`;
+- `SkylineLdltFactorization::solve`;
+- `SolverMetrics` scale, residual, pivot, and work-count fields.
+
+This consumer does not include or copy SFL source. It is a compile and behavior check for MatCal's generic numerical boundary only.
 
 ## SFL Keeps
 

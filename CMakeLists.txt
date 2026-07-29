@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(MatCal
-    VERSION 0.1.0
+    VERSION 0.3.0
     DESCRIPTION "Legacy C++ numerical calculation library"
     LANGUAGES CXX
 )
@@ -193,7 +193,7 @@ configure_package_config_file(
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/MatCalConfigVersion.cmake
     VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
+    COMPATIBILITY SameMinorVersion
 )
 
 install(FILES
@@ -496,6 +496,10 @@ if(BUILD_TESTING)
 
     matcal_add_linalg_test(matcal_linalg_skyline_performance_contract_tests
         tests/linalg/skyline_performance_contract_tests.cpp
+    )
+
+    matcal_add_linalg_test(matcal_sfl_compatible_consumer_tests
+        tests/sfl_compatible_consumer/main.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_public_header_tests

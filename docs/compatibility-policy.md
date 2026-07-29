@@ -130,6 +130,18 @@ M8 adds reusable pivoted LU under `MatCal::Linalg` without deleting or renaming 
 - Legacy `LU_Decompose` keeps its old no-pivot semantics. It is not redirected to pivoted LU because the old `LUresult` cannot represent the permutation in `P A = L U`.
 - Source consumers should recompile to pick up M8 changes. ABI stability and compatibility with old precompiled binaries are still not promised.
 
+## M8.1 Release Candidate Policy
+
+M8.1 prepares `v0.3.0-alpha.1` as a source release candidate.
+
+- The CMake project version is `0.3.0`; the prerelease identity belongs to the Git tag and release notes.
+- `v0.2.0-alpha.1` remains the old M2.1 Skyline/LDLT baseline and must not be rewritten.
+- `v0.3.0-alpha.1` adds multiple public targets and public APIs since M2.1, so downstream projects should treat it as a controlled source upgrade.
+- ABI stability is not promised. Downstream users should rebuild from the pinned source package.
+- `MatCal::Legacy` remains available with the same legacy headers, namespaces, and public entry points.
+- `MatCal::Linalg` remains independent from `MatCal::Legacy`.
+- The default SFL integration model remains pinned CMake source build, not copying MatCal source into SFL and not relying on precompiled MatCal binaries.
+
 ## Deprecation Strategy
 
 When an existing public API is unsafe but likely used:

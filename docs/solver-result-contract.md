@@ -99,6 +99,8 @@ Current solver examples:
 
 For `solve_dense_partial_pivot`, `iterations` records elimination steps and `residual_norm` is retained as an alias for `absolute_residual_norm`. For skyline LDLT, `iterations` records factorization rows or solve size depending on phase. `operation_count` is a reference work counter rather than a hardware-level flop count; M2.1 also reports factorization and solve portions separately.
 
+M8 pivoted LU reports factorization and solve counts separately. Reusing one `PivotedLuFactorization` for multiple RHS keeps `factorization_operation_count` equal to the original factorization count and increments only solve-side work for each call.
+
 Residual contract:
 
 ```text

@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux-gcc:
+    name: Linux GCC
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Debug
+        run: cmake -S . -B build-linux-debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build Debug
+        run: cmake --build build-linux-debug --parallel
+
+      - name: Test Debug
+        run: ctest --test-dir build-linux-debug --output-on-failure
+
+      - name: Configure Release
+        run: cmake -S . -B build-linux-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+
+      - name: Build Release
+        run: cmake --build build-linux-release --parallel
+
+      - name: Test Release
+        run: ctest --test-dir build-linux-release --output-on-failure
+
+      - name: Install Release
+        run: cmake --install build-linux-release --prefix install-linux
+
+      - name: Configure Package Consumer
+        run: cmake -S tests/package_consumer -B build-package-consumer -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install-linux"
+
+      - name: Build Package Consumer
+        run: cmake --build build-package-consumer --parallel
+
+      - name: Run Package Consumer
+        run: ./build-package-consumer/matcal_package_consumer
+
+      - name: Configure Add-Subdirectory Consumer
+        run: cmake -S tests/add_subdirectory_consumer -B build-add-subdirectory-consumer
+
+      - name: Build Add-Subdirectory Consumer
+        run: cmake --build build-add-subdirectory-consumer --parallel
+
+      - name: Run Add-Subdirectory Consumer
+        run: ./build-add-subdirectory-consumer/matcal_add_subdirectory_consumer
+
+      - name: Configure SFL-Compatible Consumer
+        run: cmake -S tests/sfl_compatible_consumer -B build-sfl-compatible-consumer -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install-linux"
+
+      - name: Build SFL-Compatible Consumer
+        run: cmake --build build-sfl-compatible-consumer --parallel
+
+      - name: Run SFL-Compatible Consumer
+        run: ./build-sfl-compatible-consumer/matcal_sfl_compatible_consumer
+
+  windows-msvc:
+    name: Windows MSVC
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build-windows -A x64
+
+      - name: Build Debug
+        run: cmake --build build-windows --config Debug --parallel
+
+      - name: Test Debug
+        run: ctest --test-dir build-windows -C Debug --output-on-failure
+
+      - name: Build Release
+        run: cmake --build build-windows --config Release --parallel
+
+      - name: Test Release
+        run: ctest --test-dir build-windows -C Release --output-on-failure
+
+      - name: Install Release
+        run: cmake --install build-windows --config Release --prefix install-windows
+
+      - name: Configure Package Consumer
+        run: cmake -S tests/package_consumer -B build-package-consumer -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install-windows"
+
+      - name: Build Package Consumer
+        run: cmake --build build-package-consumer --config Release --parallel
+
+      - name: Run Package Consumer
+        run: .\build-package-consumer\Release\matcal_package_consumer.exe
+
+      - name: Configure Add-Subdirectory Consumer
+        run: cmake -S tests/add_subdirectory_consumer -B build-add-subdirectory-consumer -A x64
+
+      - name: Build Add-Subdirectory Consumer
+        run: cmake --build build-add-subdirectory-consumer --config Release --parallel
+
+      - name: Run Add-Subdirectory Consumer
+        run: .\build-add-subdirectory-consumer\Release\matcal_add_subdirectory_consumer.exe
+
+      - name: Configure SFL-Compatible Consumer
+        run: cmake -S tests/sfl_compatible_consumer -B build-sfl-compatible-consumer -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install-windows"
+
+      - name: Build SFL-Compatible Consumer
+        run: cmake --build build-sfl-compatible-consumer --config Release --parallel
+
+      - name: Run SFL-Compatible Consumer
+        run: .\build-sfl-compatible-consumer\Release\matcal_sfl_compatible_consumer.exe

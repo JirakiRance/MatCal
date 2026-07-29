@@ -109,3 +109,12 @@ This list is intentionally direct. Do not treat confirmed bugs as the standard f
 - Dense multi-RHS solves are atomic and reuse one factorization.
 - Legacy `determinant` now delegates to pivoted LU and computes `permutation_sign * product(diag(U))`.
 - Legacy `LU_Decompose` remains the old no-pivot compatibility API because its result type cannot represent `P` in `P A = L U`.
+
+## M8.1 Release Candidate Limitations
+
+- `v0.3.0-alpha.1` is a source-package release candidate, not an ABI-stable release.
+- The CMake package version is numeric `0.3.0`; the annotated Git tag should carry the prerelease name `v0.3.0-alpha.1` after remote CI is green.
+- `MatCal::Linalg` still provides dense reference algorithms and SPD skyline LDLT only. No CSR, QR, SVD, Bunch-Kaufman, or FEM-specific solver is included.
+- The SFL-compatible consumer is a generic API compatibility check. It is not SFL integration and does not validate FEM assembly, constraints, material behavior, result recovery, or SFL diagnostics.
+- CI workflows are added for GitHub Linux GCC and Windows MSVC, but they should not be reported as passed until they actually run on the remote.
+- MSVC add-subdirectory consumers that include legacy root headers may still report C4819 code-page warnings from historical non-ASCII comments in `src/Insert.hpp`, `src/QinJiuShao.hpp`, and `src/Matrix.hpp`. M8.1 does not perform a broad source encoding conversion.

@@ -156,3 +156,13 @@ M2 adds `SymmetricSkylineMatrix` and `SkylineLdltFactorization`; M2.1 freezes th
 M2.1 keeps the same public classes and functions. It optimizes existing back substitution to use column profile adjacency rather than scanning all later rows, and it extends `SolverMetrics` with `factorization_operation_count` and `solve_operation_count` while keeping `operation_count` as a total/reference counter.
 
 See `docs/skyline-ldlt.md` for the full storage and numerical contract.
+
+## M8.1 API Audit Notes
+
+The `MatCal::Linalg` public surface for `v0.3.0-alpha.1` is still a 0.x source API:
+
+- `PivotedLuFactorization` is copyable and movable by value because it owns standard-library storage only.
+- `PivotedLuFactorization::lu()`, `row_permutation()`, and `permutation_sign()` expose the numerical factorization contract without borrowing from input matrices.
+- `PivotedLuFactorization::solve(...)` does not mutate the factorization, so multiple RHS solves reuse the same data.
+- Failure results do not contain partial solutions.
+- Dense, skyline, iterative, and eigen APIs use structured diagnostics and do not depend on SFL diagnostics.
