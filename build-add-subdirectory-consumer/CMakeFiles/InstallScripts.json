@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"E:/Ducuments/codeForVScode/MatCal/build-add-subdirectory-consumer/cmake_install.cmake",
-		"E:/Ducuments/codeForVScode/MatCal/build-add-subdirectory-consumer/matcal-build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
