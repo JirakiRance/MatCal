@@ -14,7 +14,7 @@ No new numerical algorithms, CMake targets, public classes, solver statuses, or 
 
 - Adds the alpha API manifest to the main branch baseline.
 - Adds Linux CI diagnostics so failed CTest runs rerun failed tests verbosely.
-- Emits failed Linux CTest names as GitHub annotations so they remain visible even when artifact downloads require repository permissions.
+- Emits failed Linux CTest names and `FAIL:` assertion summaries as GitHub annotations so they remain visible even when artifact downloads require repository permissions.
 - Uploads Linux CTest `LastTest.log` and `LastTestsFailed.log` artifacts on failure when those files exist.
 - Restricts Debug and Release rerun/upload diagnostics to the matching failed CTest step, avoiding spurious Release diagnostics after an earlier Debug failure.
 - Records the missing repository license as a release blocker in `docs/licensing-decision.md`.
@@ -26,7 +26,7 @@ Do not create `v0.3.0-alpha.2` until a pushed alpha.2 candidate commit has green
 If Linux CI still fails, the workflow should provide:
 
 - verbose rerun output for failed tests;
-- a GitHub annotation containing the failed CTest names;
+- GitHub annotations containing the failed CTest names and assertion summaries;
 - `linux-debug-ctest-logs` artifact for Debug failures;
 - `linux-release-ctest-logs` artifact for Release failures when Release tests run.
 

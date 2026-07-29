@@ -30,6 +30,12 @@ jobs:
             failed_tests="$(tr '\n' '; ' < build-linux-debug/Testing/Temporary/LastTestsFailed.log)"
             echo "::error title=Linux Debug CTest failed::${failed_tests}"
           fi
+          if [ -f build-linux-debug/Testing/Temporary/LastTest.log ]; then
+            failure_lines="$(grep -E 'FAIL:|failure\\(s\\)' build-linux-debug/Testing/Temporary/LastTest.log | tail -n 40 | tr '\n' '; ' || true)"
+            if [ -n "$failure_lines" ]; then
+              echo "::error title=Linux Debug CTest assertions::${failure_lines}"
+            fi
+          fi
 
       - name: Rerun Failed Debug Tests Verbosely
         if: failure() && steps.test-debug.outcome == 'failure'
@@ -61,6 +67,12 @@ jobs:
           if [ -f build-linux-release/Testing/Temporary/LastTestsFailed.log ]; then
             failed_tests="$(tr '\n' '; ' < build-linux-release/Testing/Temporary/LastTestsFailed.log)"
             echo "::error title=Linux Release CTest failed::${failed_tests}"
+          fi
+          if [ -f build-linux-release/Testing/Temporary/LastTest.log ]; then
+            failure_lines="$(grep -E 'FAIL:|failure\\(s\\)' build-linux-release/Testing/Temporary/LastTest.log | tail -n 40 | tr '\n' '; ' || true)"
+            if [ -n "$failure_lines" ]; then
+              echo "::error title=Linux Release CTest assertions::${failure_lines}"
+            fi
           fi
 
       - name: Rerun Failed Release Tests Verbosely
