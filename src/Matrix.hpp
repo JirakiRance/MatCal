@@ -1665,8 +1665,8 @@ namespace MatCal::Algorithm::Matrix{
 
 //**********************线性方程组求解****************
 
-    //列主元消去法求解Ax=b
-    //列主元解一次方程(支持一次多组求解),求解交给上三角矩阵来做，所以不会除以对角元素
+    // Partial-pivot Gaussian elimination solve for Ax=b.
+    // Supports multiple right-hand-side columns through the legacy facade.
     inline std::unique_ptr<AbstractMatrix> solve_columnElimination(AbstractMatrix& A,AbstractMatrix& b){
         auto dense = MatCal::Legacy::to_linalg_dense(A);
         if(b.getRows() != A.getRows())
@@ -1881,7 +1881,7 @@ namespace MatCal::Algorithm::Matrix{
         return mapped;
     }
 
-    //Jacobi法
+    // Jacobi method.
     inline Iteration_Result Jacobi(AbstractMatrix&A,AbstractMatrix&b,double epsilon=1e-6,int max_iterations=100){
         return map_stationary_result(A, b, epsilon, max_iterations,
             [](const MatCal::Linalg::DenseMatrix& dense,
@@ -1928,7 +1928,7 @@ namespace MatCal::Algorithm::Matrix{
         int iterations;
         PowerMethod_Result(double val,Matrix& vec,int iter = 0):eigenvalue(val),eigenvector(vec),iterations(iter){};
     };
-    //规范化幂法
+    // Normalized power method.
     inline PowerMethod_Result PowerMethod(AbstractMatrix&A,double eps = 1e-6,int max_iter = 1000){
         if(!A.isSquare())
             throw std::invalid_argument("using power method,matrix should be square!");

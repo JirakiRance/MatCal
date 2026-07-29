@@ -249,7 +249,7 @@ public:
     const std::vector<QinJiuShaoNode>& getParameters() const {
         return this->parameters;
     }
-    //将多项式转换为拥有系数副本的函数对象，便于数值计算使用
+    // Return an owning callable backed by a Polynomial coefficient copy.
     std::function<double(double)> toFunction() const {
         return this->toPolynomial().to_function();
     }
@@ -368,7 +368,7 @@ private:
         }
     }
     //内部维护的秦九韶次数降序排列函数，用户不关心,现在由于已经改了构造结构，这个不需要了
-    [[deprecated("这个没啥用了")]]
+    [[deprecated("Use cleanup() or modern Polynomial APIs instead.")]]
     void sortByDegree(){
         std::sort(this->parameters.begin(),this->parameters.end(), 
                  [](const QinJiuShaoNode& a, const QinJiuShaoNode& b) {
@@ -376,7 +376,7 @@ private:
                  });
     }
     //内部维护的无效结点剔除函数，用户不关心。现在没用了
-    [[deprecated("用cleanup()方法更好，这个方法是老早之前为了构造方便用的")]]
+    [[deprecated("Use cleanup() instead.")]]
     void remove_fake(){
         this->parameters.erase(
             std::remove_if(this->parameters.begin(), this->parameters.end(),
