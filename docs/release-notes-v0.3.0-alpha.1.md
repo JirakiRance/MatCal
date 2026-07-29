@@ -63,6 +63,7 @@ Legacy headers, namespaces, constructors, and PT-sensitive APIs such as interpol
 ## Known Limits
 
 - No ABI stability promise.
+- No `LICENSE`, `NOTICE`, or `THIRD_PARTY` file is present in the repository snapshot.
 - No CSR, QR, SVD, Bunch-Kaufman, or general indefinite symmetric factorization.
 - Skyline LDLT remains SPD-only and unpivoted.
 - Dense iterative and eigen solvers are reference algorithms, not large-scale production solvers.

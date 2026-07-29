@@ -69,7 +69,7 @@ Installed files include:
 
 ## Package Review
 
-M8.1 package consumers check that all formal targets are exported:
+M8.1 package consumers use `find_package(MatCal 0.3 CONFIG REQUIRED)` and check that all formal targets are exported:
 
 - `MatCal::Legacy`
 - `MatCal::Linalg`
@@ -84,6 +84,8 @@ M8.1 package consumers check that all formal targets are exported:
 The package consumer links only the targets; it does not add manual include directories. This checks that installed include paths and transitive dependencies propagate through targets. `MatCal::Legacy` exports its dependencies on migrated header-only cores. `MatCal::Linalg` remains independent from `MatCal::Legacy`.
 
 The generated `MatCalConfigVersion.cmake` uses `SameMinorVersion` compatibility. This is intentional for the 0.x line: a consumer requesting `0.3` may accept compatible `0.3.z` packages, while `0.2` and `0.4` are not treated as interchangeable.
+
+See `docs/api-manifest-v0.3.0-alpha.1.md` for the frozen source API manifest.
 
 ## Compatibility Notes
 
