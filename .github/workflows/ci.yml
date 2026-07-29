@@ -20,14 +20,23 @@ jobs:
         run: cmake --build build-linux-debug --parallel
 
       - name: Test Debug
+        id: test-debug
         run: ctest --test-dir build-linux-debug --output-on-failure --no-tests=error
 
+      - name: Report Failed Debug Tests
+        if: failure() && steps.test-debug.outcome == 'failure'
+        run: |
+          if [ -f build-linux-debug/Testing/Temporary/LastTestsFailed.log ]; then
+            failed_tests="$(tr '\n' '; ' < build-linux-debug/Testing/Temporary/LastTestsFailed.log)"
+            echo "::error title=Linux Debug CTest failed::${failed_tests}"
+          fi
+
       - name: Rerun Failed Debug Tests Verbosely
-        if: failure()
+        if: failure() && steps.test-debug.outcome == 'failure'
         run: ctest --test-dir build-linux-debug --rerun-failed --output-on-failure -V
 
       - name: Upload Debug CTest Logs
-        if: failure()
+        if: failure() && steps.test-debug.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: linux-debug-ctest-logs
@@ -43,14 +52,23 @@ jobs:
         run: cmake --build build-linux-release --parallel
 
       - name: Test Release
+        id: test-release
         run: ctest --test-dir build-linux-release --output-on-failure --no-tests=error
 
+      - name: Report Failed Release Tests
+        if: failure() && steps.test-release.outcome == 'failure'
+        run: |
+          if [ -f build-linux-release/Testing/Temporary/LastTestsFailed.log ]; then
+            failed_tests="$(tr '\n' '; ' < build-linux-release/Testing/Temporary/LastTestsFailed.log)"
+            echo "::error title=Linux Release CTest failed::${failed_tests}"
+          fi
+
       - name: Rerun Failed Release Tests Verbosely
-        if: failure()
+        if: failure() && steps.test-release.outcome == 'failure'
         run: ctest --test-dir build-linux-release --rerun-failed --output-on-failure -V
 
       - name: Upload Release CTest Logs
-        if: failure()
+        if: failure() && steps.test-release.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: linux-release-ctest-logs
