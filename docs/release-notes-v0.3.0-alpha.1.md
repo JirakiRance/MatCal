@@ -2,6 +2,8 @@
 
 `v0.3.0-alpha.1` is the planned release candidate for the migrated MatCal 0.x source API after M8. It must be tagged only after the release-preparation commit is pushed and the remote Linux/Windows CI jobs are green.
 
+Post-tag status: this tag was pushed at `31f493789a5b2f191aef59c828ec7562a7f9412f`, but GitHub Linux GCC CI failed in the Debug CTest step while Windows MSVC CI passed. Do not move or rewrite the tag. Use `v0.3.0-alpha.2` for the next candidate after Linux CI closure.
+
 ## Version
 
 - CMake project version: `0.3.0`

@@ -20,7 +20,21 @@ jobs:
         run: cmake --build build-linux-debug --parallel
 
       - name: Test Debug
-        run: ctest --test-dir build-linux-debug --output-on-failure
+        run: ctest --test-dir build-linux-debug --output-on-failure --no-tests=error
+
+      - name: Rerun Failed Debug Tests Verbosely
+        if: failure()
+        run: ctest --test-dir build-linux-debug --rerun-failed --output-on-failure -V
+
+      - name: Upload Debug CTest Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-debug-ctest-logs
+          path: |
+            build-linux-debug/Testing/Temporary/LastTest.log
+            build-linux-debug/Testing/Temporary/LastTestsFailed.log
+          if-no-files-found: ignore
 
       - name: Configure Release
         run: cmake -S . -B build-linux-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
@@ -29,7 +43,21 @@ jobs:
         run: cmake --build build-linux-release --parallel
 
       - name: Test Release
-        run: ctest --test-dir build-linux-release --output-on-failure
+        run: ctest --test-dir build-linux-release --output-on-failure --no-tests=error
+
+      - name: Rerun Failed Release Tests Verbosely
+        if: failure()
+        run: ctest --test-dir build-linux-release --rerun-failed --output-on-failure -V
+
+      - name: Upload Release CTest Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-ctest-logs
+          path: |
+            build-linux-release/Testing/Temporary/LastTest.log
+            build-linux-release/Testing/Temporary/LastTestsFailed.log
+          if-no-files-found: ignore
 
       - name: Install Release
         run: cmake --install build-linux-release --prefix install-linux
