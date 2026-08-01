@@ -85,7 +85,7 @@ The package consumer links only the targets; it does not add manual include dire
 
 The generated `MatCalConfigVersion.cmake` uses `SameMinorVersion` compatibility. This is intentional for the 0.x line: a consumer requesting `0.3` may accept compatible `0.3.z` packages, while `0.2` and `0.4` are not treated as interchangeable.
 
-See `docs/api-manifest-v0.3.0-alpha.1.md` for the frozen source API manifest.
+See `docs/releases/api-manifest-v0.3.0-alpha.2.md` for the current frozen source API manifest.
 
 ## Compatibility Notes
 

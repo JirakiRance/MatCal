@@ -20,7 +20,7 @@ The expected differences from alpha.1 are release engineering only:
 
 - improved Linux CI diagnostics;
 - alpha API manifest documentation on main;
-- explicit licensing decision blocker documentation.
+- explicit release-asset notes.
 
 ## CMake Targets
 
@@ -150,6 +150,11 @@ Public legacy headers, class names, constructor forms, and main function names a
 ## Release Asset Notes
 
 - `.gitmodules`: absent; no submodules are required.
-- License: undecided; see `docs/licensing-decision.md`.
-- Source archive should contain CMake/package files, `include/`, `src/`, `tests/`, `docs/`, `.github/workflows/ci.yml`, `README.md`, and `.gitignore`.
+- License at the published tag snapshot: no `LICENSE` file was present.
+- License on current `main` after D1 maintenance cleanup: MIT.
+- The published tag source archive contains CMake/package files, `include/`,
+  `src/`, `tests/`, `docs/`, `.github/workflows/ci.yml`, `README.md`, and
+  `.gitignore`.
+- Current `main` after D1 also contains `LICENSE` and installs it with the CMake
+  package.
 - Build directories and generated install trees must remain untracked.

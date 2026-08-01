@@ -155,7 +155,7 @@ M2 adds `SymmetricSkylineMatrix` and `SkylineLdltFactorization`; M2.1 freezes th
 
 M2.1 keeps the same public classes and functions. It optimizes existing back substitution to use column profile adjacency rather than scanning all later rows, and it extends `SolverMetrics` with `factorization_operation_count` and `solve_operation_count` while keeping `operation_count` as a total/reference counter.
 
-See `docs/skyline-ldlt.md` for the full storage and numerical contract.
+See `docs/reference/skyline-ldlt.md` for the full storage and numerical contract.
 
 ## M8.1 API Audit Notes
 

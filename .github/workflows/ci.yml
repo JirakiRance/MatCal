@@ -93,7 +93,7 @@ jobs:
         run: cmake --install build-linux-release --prefix install-linux
 
       - name: Configure Package Consumer
-        run: cmake -S tests/package_consumer -B build-package-consumer -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install-linux"
+        run: cmake -S tests/integration/consumers/package_consumer -B build-package-consumer -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install-linux"
 
       - name: Build Package Consumer
         run: cmake --build build-package-consumer --parallel
@@ -102,7 +102,7 @@ jobs:
         run: ./build-package-consumer/matcal_package_consumer
 
       - name: Configure Add-Subdirectory Consumer
-        run: cmake -S tests/add_subdirectory_consumer -B build-add-subdirectory-consumer
+        run: cmake -S tests/integration/consumers/add_subdirectory_consumer -B build-add-subdirectory-consumer
 
       - name: Build Add-Subdirectory Consumer
         run: cmake --build build-add-subdirectory-consumer --parallel
@@ -111,7 +111,7 @@ jobs:
         run: ./build-add-subdirectory-consumer/matcal_add_subdirectory_consumer
 
       - name: Configure SFL-Compatible Consumer
-        run: cmake -S tests/sfl_compatible_consumer -B build-sfl-compatible-consumer -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install-linux"
+        run: cmake -S tests/integration/consumers/sfl_compatible_consumer -B build-sfl-compatible-consumer -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install-linux"
 
       - name: Build SFL-Compatible Consumer
         run: cmake --build build-sfl-compatible-consumer --parallel
@@ -146,7 +146,7 @@ jobs:
         run: cmake --install build-windows --config Release --prefix install-windows
 
       - name: Configure Package Consumer
-        run: cmake -S tests/package_consumer -B build-package-consumer -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install-windows"
+        run: cmake -S tests/integration/consumers/package_consumer -B build-package-consumer -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install-windows"
 
       - name: Build Package Consumer
         run: cmake --build build-package-consumer --config Release --parallel
@@ -155,7 +155,7 @@ jobs:
         run: .\build-package-consumer\Release\matcal_package_consumer.exe
 
       - name: Configure Add-Subdirectory Consumer
-        run: cmake -S tests/add_subdirectory_consumer -B build-add-subdirectory-consumer -A x64
+        run: cmake -S tests/integration/consumers/add_subdirectory_consumer -B build-add-subdirectory-consumer -A x64
 
       - name: Build Add-Subdirectory Consumer
         run: cmake --build build-add-subdirectory-consumer --config Release --parallel
@@ -164,7 +164,7 @@ jobs:
         run: .\build-add-subdirectory-consumer\Release\matcal_add_subdirectory_consumer.exe
 
       - name: Configure SFL-Compatible Consumer
-        run: cmake -S tests/sfl_compatible_consumer -B build-sfl-compatible-consumer -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install-windows"
+        run: cmake -S tests/integration/consumers/sfl_compatible_consumer -B build-sfl-compatible-consumer -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install-windows"
 
       - name: Build SFL-Compatible Consumer
         run: cmake --build build-sfl-compatible-consumer --config Release --parallel

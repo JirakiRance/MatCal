@@ -128,6 +128,12 @@ target_link_libraries(matcal_nonlinear INTERFACE MatCal::Linalg)
 target_link_libraries(matcal_least_squares INTERFACE MatCal::Linalg MatCal::Polynomial)
 
 function(matcal_configure_test_target target_name)
+    target_include_directories(${target_name} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/legacy
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/linalg
+    )
+
     if(MATCAL_ENABLE_WARNINGS)
         if(MSVC)
             target_compile_options(${target_name} PRIVATE /W4 /permissive-)
@@ -143,6 +149,12 @@ function(matcal_configure_test_target target_name)
 endfunction()
 
 function(matcal_configure_linalg_target target_name)
+    target_include_directories(${target_name} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/legacy
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/linalg
+    )
+
     if(MATCAL_ENABLE_WARNINGS)
         if(MSVC)
             target_compile_options(${target_name} PRIVATE /W4 /permissive- /WX)
@@ -202,6 +214,10 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MatCal
 )
 
+install(FILES LICENSE
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -213,27 +229,27 @@ if(BUILD_TESTING)
     endfunction()
 
     matcal_add_legacy_test(matcal_characterization_tests
-        tests/characterization_tests.cpp
+        tests/unit/legacy/characterization_tests.cpp
     )
 
     matcal_add_legacy_test(matcal_legacy_triangular_regression_tests
-        tests/legacy_triangular_regression_tests.cpp
+        tests/unit/legacy/legacy_triangular_regression_tests.cpp
     )
 
     matcal_add_legacy_test(matcal_legacy_zero_size_regression_tests
-        tests/legacy_zero_size_regression_tests.cpp
+        tests/unit/legacy/legacy_zero_size_regression_tests.cpp
     )
 
     matcal_add_legacy_test(matcal_legacy_numerics_regression_tests
-        tests/legacy_numerics_regression_tests.cpp
+        tests/unit/legacy/legacy_numerics_regression_tests.cpp
     )
 
     matcal_add_legacy_test(matcal_legacy_sor_regression_tests
-        tests/legacy_sor_regression_tests.cpp
+        tests/unit/legacy/legacy_sor_regression_tests.cpp
     )
 
     matcal_add_legacy_test(matcal_legacy_matrix_linalg_adapter_tests
-        tests/legacy_matrix_linalg_adapter_tests.cpp
+        tests/unit/legacy/legacy_matrix_linalg_adapter_tests.cpp
     )
 
     function(matcal_add_linalg_test target_name)
@@ -293,38 +309,38 @@ if(BUILD_TESTING)
     endfunction()
 
     matcal_add_polynomial_test(matcal_polynomial_tests
-        tests/polynomial_tests.cpp
+        tests/unit/polynomial/polynomial_tests.cpp
     )
 
     matcal_add_polynomial_test(matcal_polynomial_public_header_tests
-        tests/polynomial_public_headers_main.cpp
-        tests/header_polynomial_self_contained.cpp
+        tests/integration/public_headers/polynomial_public_headers_main.cpp
+        tests/integration/public_headers/header_polynomial_self_contained.cpp
     )
 
     matcal_add_polynomial_test(matcal_polynomial_multi_tu_tests
-        tests/polynomial_multi_tu_main.cpp
-        tests/polynomial_multi_tu_a.cpp
-        tests/polynomial_multi_tu_b.cpp
+        tests/integration/multi_tu/polynomial_multi_tu_main.cpp
+        tests/integration/multi_tu/polynomial_multi_tu_a.cpp
+        tests/integration/multi_tu/polynomial_multi_tu_b.cpp
     )
 
     matcal_add_roots_test(matcal_roots_tests
-        tests/roots_tests.cpp
+        tests/unit/roots/roots_tests.cpp
     )
 
     matcal_add_interpolation_test(matcal_interpolation_tests
-        tests/interpolation_tests.cpp
+        tests/unit/interpolation/interpolation_tests.cpp
     )
 
     matcal_add_interpolation_test(matcal_interpolation_remaining_tests
-        tests/interpolation_remaining_tests.cpp
+        tests/unit/interpolation/interpolation_remaining_tests.cpp
     )
 
     add_executable(matcal_roots_interpolation_public_header_tests
-        tests/roots_interpolation_public_headers_main.cpp
-        tests/header_roots_self_contained.cpp
-        tests/header_linear_interpolator_self_contained.cpp
-        tests/header_cubic_spline_self_contained.cpp
-        tests/header_polynomial_interpolation_self_contained.cpp
+        tests/integration/public_headers/roots_interpolation_public_headers_main.cpp
+        tests/integration/public_headers/header_roots_self_contained.cpp
+        tests/integration/public_headers/header_linear_interpolator_self_contained.cpp
+        tests/integration/public_headers/header_cubic_spline_self_contained.cpp
+        tests/integration/public_headers/header_polynomial_interpolation_self_contained.cpp
     )
     target_link_libraries(matcal_roots_interpolation_public_header_tests PRIVATE
         MatCal::Roots
@@ -334,10 +350,10 @@ if(BUILD_TESTING)
     add_test(NAME matcal_roots_interpolation_public_header_tests COMMAND matcal_roots_interpolation_public_header_tests)
 
     add_executable(matcal_roots_interpolation_multi_tu_tests
-        tests/roots_interpolation_multi_tu_main.cpp
-        tests/roots_multi_tu_a.cpp
-        tests/interpolation_multi_tu_b.cpp
-        tests/interpolation_remaining_multi_tu_c.cpp
+        tests/integration/multi_tu/roots_interpolation_multi_tu_main.cpp
+        tests/integration/multi_tu/roots_multi_tu_a.cpp
+        tests/integration/multi_tu/interpolation_multi_tu_b.cpp
+        tests/integration/multi_tu/interpolation_remaining_multi_tu_c.cpp
     )
     target_link_libraries(matcal_roots_interpolation_multi_tu_tests PRIVATE
         MatCal::Roots
@@ -347,24 +363,24 @@ if(BUILD_TESTING)
     add_test(NAME matcal_roots_interpolation_multi_tu_tests COMMAND matcal_roots_interpolation_multi_tu_tests)
 
     add_executable(matcal_pt_style_consumer_tests
-        tests/pt_style_consumer/main.cpp
+        tests/integration/consumers/pt_style_consumer/main.cpp
     )
     target_link_libraries(matcal_pt_style_consumer_tests PRIVATE MatCal::Legacy)
     matcal_configure_test_target(matcal_pt_style_consumer_tests)
     add_test(NAME matcal_pt_style_consumer_tests COMMAND matcal_pt_style_consumer_tests)
 
     matcal_add_calculus_test(matcal_calculus_tests
-        tests/calculus_tests.cpp
+        tests/unit/calculus/calculus_tests.cpp
     )
 
     matcal_add_ode_test(matcal_ode_tests
-        tests/ode_tests.cpp
+        tests/unit/ode/ode_tests.cpp
     )
 
     add_executable(matcal_calculus_ode_public_header_tests
-        tests/calculus_ode_public_headers_main.cpp
-        tests/header_calculus_self_contained.cpp
-        tests/header_ode_self_contained.cpp
+        tests/integration/public_headers/calculus_ode_public_headers_main.cpp
+        tests/integration/public_headers/header_calculus_self_contained.cpp
+        tests/integration/public_headers/header_ode_self_contained.cpp
     )
     target_link_libraries(matcal_calculus_ode_public_header_tests PRIVATE
         MatCal::Calculus
@@ -374,9 +390,9 @@ if(BUILD_TESTING)
     add_test(NAME matcal_calculus_ode_public_header_tests COMMAND matcal_calculus_ode_public_header_tests)
 
     add_executable(matcal_calculus_ode_multi_tu_tests
-        tests/calculus_ode_multi_tu_main.cpp
-        tests/calculus_multi_tu_a.cpp
-        tests/ode_multi_tu_b.cpp
+        tests/integration/multi_tu/calculus_ode_multi_tu_main.cpp
+        tests/integration/multi_tu/calculus_multi_tu_a.cpp
+        tests/integration/multi_tu/ode_multi_tu_b.cpp
     )
     target_link_libraries(matcal_calculus_ode_multi_tu_tests PRIVATE
         MatCal::Calculus
@@ -386,32 +402,32 @@ if(BUILD_TESTING)
     add_test(NAME matcal_calculus_ode_multi_tu_tests COMMAND matcal_calculus_ode_multi_tu_tests)
 
     add_executable(matcal_calculus_only_consumer_tests
-        tests/calculus_only_consumer.cpp
+        tests/unit/calculus/calculus_only_consumer.cpp
     )
     target_link_libraries(matcal_calculus_only_consumer_tests PRIVATE MatCal::Calculus)
     matcal_configure_test_target(matcal_calculus_only_consumer_tests)
     add_test(NAME matcal_calculus_only_consumer_tests COMMAND matcal_calculus_only_consumer_tests)
 
     add_executable(matcal_ode_only_consumer_tests
-        tests/ode_only_consumer.cpp
+        tests/unit/ode/ode_only_consumer.cpp
     )
     target_link_libraries(matcal_ode_only_consumer_tests PRIVATE MatCal::ODE)
     matcal_configure_test_target(matcal_ode_only_consumer_tests)
     add_test(NAME matcal_ode_only_consumer_tests COMMAND matcal_ode_only_consumer_tests)
 
     matcal_add_nonlinear_test(matcal_nonlinear_tests
-        tests/nonlinear_tests.cpp
+        tests/unit/nonlinear/nonlinear_tests.cpp
     )
 
     matcal_add_least_squares_test(matcal_least_squares_tests
-        tests/least_squares_tests.cpp
+        tests/unit/least_squares/least_squares_tests.cpp
     )
 
     add_executable(matcal_nonlinear_least_squares_interpolation_public_header_tests
-        tests/nonlinear_least_squares_interpolation_public_headers_main.cpp
-        tests/header_nonlinear_self_contained.cpp
-        tests/header_least_squares_self_contained.cpp
-        tests/header_polynomial_interpolation_self_contained.cpp
+        tests/integration/public_headers/nonlinear_least_squares_interpolation_public_headers_main.cpp
+        tests/integration/public_headers/header_nonlinear_self_contained.cpp
+        tests/integration/public_headers/header_least_squares_self_contained.cpp
+        tests/integration/public_headers/header_polynomial_interpolation_self_contained.cpp
     )
     target_link_libraries(matcal_nonlinear_least_squares_interpolation_public_header_tests PRIVATE
         MatCal::Nonlinear
@@ -423,10 +439,10 @@ if(BUILD_TESTING)
         COMMAND matcal_nonlinear_least_squares_interpolation_public_header_tests)
 
     add_executable(matcal_nonlinear_least_squares_interpolation_multi_tu_tests
-        tests/nonlinear_least_squares_interpolation_multi_tu_main.cpp
-        tests/nonlinear_multi_tu_a.cpp
-        tests/least_squares_multi_tu_b.cpp
-        tests/interpolation_remaining_multi_tu_c.cpp
+        tests/integration/multi_tu/nonlinear_least_squares_interpolation_multi_tu_main.cpp
+        tests/integration/multi_tu/nonlinear_multi_tu_a.cpp
+        tests/integration/multi_tu/least_squares_multi_tu_b.cpp
+        tests/integration/multi_tu/interpolation_remaining_multi_tu_c.cpp
     )
     target_link_libraries(matcal_nonlinear_least_squares_interpolation_multi_tu_tests PRIVATE
         MatCal::Nonlinear
@@ -438,94 +454,106 @@ if(BUILD_TESTING)
         COMMAND matcal_nonlinear_least_squares_interpolation_multi_tu_tests)
 
     add_executable(matcal_nonlinear_only_consumer_tests
-        tests/nonlinear_only_consumer.cpp
+        tests/unit/nonlinear/nonlinear_only_consumer.cpp
     )
     target_link_libraries(matcal_nonlinear_only_consumer_tests PRIVATE MatCal::Nonlinear)
     matcal_configure_test_target(matcal_nonlinear_only_consumer_tests)
     add_test(NAME matcal_nonlinear_only_consumer_tests COMMAND matcal_nonlinear_only_consumer_tests)
 
     add_executable(matcal_least_squares_only_consumer_tests
-        tests/least_squares_only_consumer.cpp
+        tests/unit/least_squares/least_squares_only_consumer.cpp
     )
     target_link_libraries(matcal_least_squares_only_consumer_tests PRIVATE MatCal::LeastSquares)
     matcal_configure_test_target(matcal_least_squares_only_consumer_tests)
     add_test(NAME matcal_least_squares_only_consumer_tests COMMAND matcal_least_squares_only_consumer_tests)
 
     add_executable(matcal_interpolation_only_consumer_tests
-        tests/interpolation_only_consumer.cpp
+        tests/unit/interpolation/interpolation_only_consumer.cpp
     )
     target_link_libraries(matcal_interpolation_only_consumer_tests PRIVATE MatCal::Interpolation)
     matcal_configure_test_target(matcal_interpolation_only_consumer_tests)
     add_test(NAME matcal_interpolation_only_consumer_tests COMMAND matcal_interpolation_only_consumer_tests)
 
     matcal_add_linalg_test(matcal_linalg_vector_tests
-        tests/linalg/vector_tests.cpp
+        tests/unit/linalg/vector_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_dense_matrix_tests
-        tests/linalg/dense_matrix_tests.cpp
+        tests/unit/linalg/dense_matrix_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_solver_tests
-        tests/linalg/solver_tests.cpp
+        tests/unit/linalg/solver_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_pivoted_lu_tests
-        tests/linalg/pivoted_lu_tests.cpp
+        tests/unit/linalg/pivoted_lu_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_scale_contract_tests
-        tests/linalg/scale_contract_tests.cpp
+        tests/unit/linalg/scale_contract_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_iterative_solver_tests
-        tests/linalg/iterative_solver_tests.cpp
+        tests/unit/linalg/iterative_solver_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_eigen_solver_tests
-        tests/linalg/eigen_solver_tests.cpp
+        tests/unit/linalg/eigen_solver_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_skyline_matrix_tests
-        tests/linalg/skyline_matrix_tests.cpp
+        tests/unit/linalg/skyline_matrix_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_skyline_ldlt_tests
-        tests/linalg/skyline_ldlt_tests.cpp
+        tests/unit/linalg/skyline_ldlt_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_skyline_performance_contract_tests
-        tests/linalg/skyline_performance_contract_tests.cpp
+        tests/unit/linalg/skyline_performance_contract_tests.cpp
     )
 
     matcal_add_linalg_test(matcal_sfl_compatible_consumer_tests
-        tests/sfl_compatible_consumer/main.cpp
+        tests/integration/consumers/sfl_compatible_consumer/main.cpp
     )
 
+    add_executable(matcal_documentation_example_smoke_tests
+        tests/integration/docs_smoke/user_guide_examples.cpp
+    )
+    target_link_libraries(matcal_documentation_example_smoke_tests PRIVATE
+        MatCal::Linalg
+        MatCal::Polynomial
+        MatCal::Roots
+        MatCal::Interpolation
+    )
+    matcal_configure_test_target(matcal_documentation_example_smoke_tests)
+    add_test(NAME matcal_documentation_example_smoke_tests COMMAND matcal_documentation_example_smoke_tests)
+
     matcal_add_linalg_test(matcal_linalg_public_header_tests
-        tests/linalg/public_headers_main.cpp
-        tests/linalg/header_vector_self_contained.cpp
-        tests/linalg/header_dense_matrix_self_contained.cpp
-        tests/linalg/header_solver_types_self_contained.cpp
-        tests/linalg/header_dense_solver_self_contained.cpp
-        tests/linalg/header_iterative_solvers_self_contained.cpp
-        tests/linalg/header_eigen_solvers_self_contained.cpp
-        tests/linalg/header_symmetric_skyline_self_contained.cpp
-        tests/linalg/header_skyline_ldlt_self_contained.cpp
+        tests/unit/linalg/public_headers_main.cpp
+        tests/unit/linalg/header_vector_self_contained.cpp
+        tests/unit/linalg/header_dense_matrix_self_contained.cpp
+        tests/unit/linalg/header_solver_types_self_contained.cpp
+        tests/unit/linalg/header_dense_solver_self_contained.cpp
+        tests/unit/linalg/header_iterative_solvers_self_contained.cpp
+        tests/unit/linalg/header_eigen_solvers_self_contained.cpp
+        tests/unit/linalg/header_symmetric_skyline_self_contained.cpp
+        tests/unit/linalg/header_skyline_ldlt_self_contained.cpp
     )
 
     matcal_add_linalg_test(matcal_linalg_multi_tu_tests
-        tests/linalg/multi_tu_main.cpp
-        tests/linalg/multi_tu_a.cpp
-        tests/linalg/multi_tu_b.cpp
-        tests/linalg/multi_tu_skyline.cpp
-        tests/linalg/multi_tu_iterative_eigen.cpp
+        tests/unit/linalg/multi_tu_main.cpp
+        tests/unit/linalg/multi_tu_a.cpp
+        tests/unit/linalg/multi_tu_b.cpp
+        tests/unit/linalg/multi_tu_skyline.cpp
+        tests/unit/linalg/multi_tu_iterative_eigen.cpp
     )
 
     add_executable(matcal_multi_tu_link_tests
-        tests/multi_tu_main.cpp
-        tests/multi_tu_a.cpp
-        tests/multi_tu_b.cpp
+        tests/integration/multi_tu/multi_tu_main.cpp
+        tests/integration/multi_tu/multi_tu_a.cpp
+        tests/integration/multi_tu/multi_tu_b.cpp
     )
     target_link_libraries(matcal_multi_tu_link_tests PRIVATE MatCal::Legacy)
     matcal_configure_test_target(matcal_multi_tu_link_tests)

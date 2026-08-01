@@ -133,7 +133,7 @@ Sanitizers were not run in this M0.1 pass.
 
 ## Warning Baseline
 
-See `docs/warning-baseline.md`. M0.1 intentionally fixes only warnings tied to the repaired bugs and safety contracts. Remaining warning families are preserved as documented legacy debt for M1 instead of being hidden by broad formatting or API churn.
+See `docs/internal/history/warning-baseline.md`. M0.1 intentionally fixes only warnings tied to the repaired bugs and safety contracts. Remaining warning families are preserved as documented legacy debt for M1 instead of being hidden by broad formatting or API churn.
 
 ## M6 Migration Audit
 

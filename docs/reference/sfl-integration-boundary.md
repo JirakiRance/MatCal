@@ -8,6 +8,10 @@ Allowed dependency direction:
 SFL -> MatCal
 ```
 
+For the current SFL/course-design stage, the recommended MatCal dependency is
+`v0.3.0-alpha.2`. SFL should pin the MatCal gitlink/tag and continue linking the
+required CMake target, currently primarily `MatCal::Linalg`.
+
 ## Integration Model
 
 - SFL should pin MatCal through a Git submodule or another exact-version mechanism.
@@ -16,7 +20,8 @@ SFL -> MatCal
 - SFL should not copy MatCal source files into its own repository.
 - SFL should not maintain a forked MatCal subtree as its internal implementation.
 - SFL should not use a precompiled MatCal binary as the default integration path; the default should be a pinned source version built through CMake.
-- For the M8.1 release candidate, SFL can evaluate upgrading from `v0.2.0-alpha.1` to `v0.3.0-alpha.1` by pinning the tag or exact commit and linking the required MatCal CMake targets.
+- For the current maintenance baseline, SFL can use `v0.3.0-alpha.2` by pinning
+  the tag or exact commit and linking the required MatCal CMake targets.
 
 ## MatCal Must Not Contain
 

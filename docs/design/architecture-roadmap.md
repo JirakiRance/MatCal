@@ -88,7 +88,24 @@ M3 adds:
 - `MatCal::Polynomial::Polynomial`.
 - `MatCal::Legacy` delegation from `QinJiuShao` into the shared polynomial core.
 - Installable CMake package files for `find_package(MatCal CONFIG)`.
-- A migration matrix in `docs/legacy-migration-matrix.md`.
+- A migration matrix in `docs/migration/legacy-migration-matrix.md`.
+
+## Maintenance Baseline
+
+`v0.3.0-alpha.2` is the recommended MatCal dependency version for the current
+SFL/course-design stage. The actively supported modern scope is:
+
+- `MatCal::Linalg`;
+- Skyline SPD LDLT;
+- dense partial-pivot LU;
+- the structured `SolverResult` numerical contract.
+
+M9 feature development is paused. Do not continue adding CSR, sparse iterative
+solvers, QR/SVD, or additional legacy rewrites just to complete a feature list.
+Resume feature development only for confirmed bugs or real consumer needs.
+
+Legacy remains through compatibility facades so historical source users can
+rebuild against MatCal while newer code links modern module targets.
 
 M4 adds:
 

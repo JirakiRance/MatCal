@@ -1,6 +1,6 @@
 # MatCal v0.3.0-alpha.2 Release Notes
 
-`v0.3.0-alpha.2` is the next release candidate after `v0.3.0-alpha.1`.
+`v0.3.0-alpha.2` is the released alpha.2 snapshot after `v0.3.0-alpha.1`.
 
 `v0.3.0-alpha.1` points to `31f493789a5b2f191aef59c828ec7562a7f9412f` and has already been pushed. It must not be moved, overwritten, or deleted. Its GitHub Windows MSVC job passed, but its Linux GCC job failed in the Debug CTest step.
 
@@ -18,26 +18,33 @@ No new numerical algorithms, CMake targets, public classes, solver statuses, or 
 - Uploads Linux CTest `LastTest.log` and `LastTestsFailed.log` artifacts on failure when those files exist.
 - Restricts Debug and Release rerun/upload diagnostics to the matching failed CTest step, avoiding spurious Release diagnostics after an earlier Debug failure.
 - Fixes a Picard-Aitken cancellation edge case that made `matcal_roots_tests` fail on Linux GCC Debug: near the fixed point, the Aitken denominator is now treated as unstable when it is below the requested iterate tolerance, and the step falls back to the ordinary Picard update instead of amplifying roundoff.
-- Records the missing repository license as a release blocker in `docs/licensing-decision.md`.
+- Records the then-missing repository license as a release blocker for the
+  original alpha.2 candidate. The D1 maintenance cleanup later resolved the
+  project license on `main` by adding the MIT `LICENSE` file.
 
-## CI Status Requirement
+## Published CI Status
 
-Do not create `v0.3.0-alpha.2` until a pushed alpha.2 candidate commit has green GitHub Linux GCC and Windows MSVC CI.
+The published tag points to `c1daae9d8785b82fd53370a7c903d6763a21dfbd`.
+Both main and tag CI completed successfully:
 
-If Linux CI still fails, the workflow should provide:
-
-- verbose rerun output for failed tests;
-- GitHub annotations containing the failed CTest names and assertion summaries;
-- `linux-debug-ctest-logs` artifact for Debug failures;
-- `linux-release-ctest-logs` artifact for Release failures when Release tests run.
+- Main run: <https://github.com/JirakiRance/MatCal/actions/runs/30686518196>
+- Tag run: <https://github.com/JirakiRance/MatCal/actions/runs/30686631859>
+- Linux GCC: success
+- Windows MSVC: success
 
 ## SFL Upgrade Note
 
-SFL is temporarily using `v0.3.0-alpha.1`. Once `v0.3.0-alpha.2` is green, SFL should update only the MatCal gitlink/tag to the new candidate and continue linking the required MatCal target, primarily `MatCal::Linalg` for Skyline/LDLT use. SFL must not copy MatCal sources or add MatCal as an internal subtree.
+SFL can update only the MatCal gitlink/tag to `v0.3.0-alpha.2` and continue
+linking the required MatCal target, primarily `MatCal::Linalg` for Skyline/LDLT
+use. SFL must not copy MatCal sources or add MatCal as an internal subtree.
 
 After updating the gitlink, SFL should rerun native TRI3/QUAD4, Result, and course model regressions.
 
-## Known Release Blockers
+## Release Asset Notes
 
-- Linux GCC CI failure root cause is not yet known because full GitHub job logs were not accessible through the unauthenticated/admin-limited API.
-- Repository license is not declared. See `docs/licensing-decision.md`.
+- The published `v0.3.0-alpha.2` tag points to
+  `c1daae9d8785b82fd53370a7c903d6763a21dfbd`, which predates the D1
+  maintenance cleanup. That tag source snapshot does not contain the later MIT
+  `LICENSE` file.
+- Current `main` contains the MIT license. Do not move the published tag to add
+  post-release files.
