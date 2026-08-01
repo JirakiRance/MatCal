@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation. M7 migrates legacy Matrix direct, stationary iterative, eigen, and multivariable derivative helper paths. M8 adds reusable dense pivoted LU and routes dense/legacy direct-solve facades through it. M8.1 freezes package and CI preparation for the `v0.3.0-alpha.1` release candidate.
+M0 keeps the legacy surface intact and makes future change measurable. M0.1 adds targeted safety repairs and regression tests without a full rewrite. M1 introduces the first independent `MatCal::Linalg` 0.x API. M1.1 hardens its scale, finite-value, and result contracts. M2 adds general symmetric skyline storage and SPD LDLT. M2.1 optimizes and freezes that existing skyline baseline for later integration work. M3 starts the first Legacy modernization migration with a shared polynomial core and installable CMake package metadata. M4 migrates scalar roots plus linear and natural cubic spline interpolation. M5 migrates scalar calculus and ODE/RK4 cores. M6 migrates multivariable Newton systems, polynomial least squares, and remaining classic polynomial interpolation. M7 migrates legacy Matrix direct, stationary iterative, eigen, and multivariable derivative helper paths. M8 adds reusable dense pivoted LU and routes dense/legacy direct-solve facades through it. M8.1 freezes package and CI preparation for the `v0.3.0-alpha.1` release candidate. M8.5 records the `v0.3.0-alpha.2` maintenance baseline after Linux and Windows CI closure.
 
 ## Current Shape
 
@@ -142,6 +142,21 @@ M8.1 adds:
 - Package consumer checks for every exported target and key target dependency boundaries.
 - A standalone SFL-compatible consumer that exercises the generic Skyline/LDLT API without depending on SFL code.
 - Release notes describing the M2.1 to M8 public API changes and 0.x compatibility limits.
+
+## Maintenance Baseline
+
+`v0.3.0-alpha.2` is the current recommended MatCal dependency version for SFL and other controlled downstream consumers. It points to commit `c1daae9d8785b82fd53370a7c903d6763a21dfbd` and has green Linux GCC and Windows MSVC CI on both `main` and the release tag.
+
+The stable use range for the current SFL/course-design work is:
+
+- `MatCal::Linalg`;
+- symmetric skyline storage and SPD Skyline LDLT;
+- reusable dense partial-pivot LU;
+- `SolverResult`, `SolverOptions`, diagnostics, metrics, and scale-aware numerical contracts.
+
+M9 feature development is paused. Future CSR, sparse iterative solvers, preconditioners, or additional migrations should start only when SFL or another real consumer has a concrete requirement and a testable integration path. MatCal should not add algorithms merely to complete a checklist or duplicate functionality that already has a maintained core implementation.
+
+Legacy APIs remain supported through compatibility facades. New maintenance work should preserve existing source compatibility, keep Legacy and modern core targets separated by the established dependency direction, and avoid broad rewrites unless a real bug or consumer need justifies them.
 
 ## Future Capabilities
 
